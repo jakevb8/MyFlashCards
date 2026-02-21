@@ -38,7 +38,7 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
     try {
       final now = DateTime.now();
       final card = event.flashcard.copyWith(
-        id: _uuid.v4(),
+        id: event.flashcard.id.isNotEmpty ? event.flashcard.id : _uuid.v4(),
         createdAt: now,
         updatedAt: now,
       );
@@ -62,7 +62,7 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
       final now = DateTime.now();
       for (final card in event.flashcards) {
         final stamped = card.copyWith(
-          id: _uuid.v4(),
+          id: card.id.isNotEmpty ? card.id : _uuid.v4(),
           createdAt: now,
           updatedAt: now,
         );

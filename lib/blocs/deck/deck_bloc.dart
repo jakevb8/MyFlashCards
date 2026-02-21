@@ -28,8 +28,10 @@ class DeckBloc extends Bloc<DeckEvent, DeckState> {
   Future<void> _onAddDeck(AddDeck event, Emitter<DeckState> emit) async {
     try {
       final now = DateTime.now();
+      // Preserve the caller-supplied id (used by AI generation to match
+      // flashcard deckId). Only generate a new one if id is empty.
       final deck = event.deck.copyWith(
-        id: _uuid.v4(),
+        id: event.deck.id.isNotEmpty ? event.deck.id : _uuid.v4(),
         createdAt: now,
         updatedAt: now,
       );
