@@ -1,30 +1,52 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_flash_cards/blocs/theme/theme_bloc.dart';
+import 'package:my_flash_cards/core/theme/app_theme.dart';
+import 'package:my_flash_cards/screens/decks/deck_list_screen.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:my_flash_cards/blocs/deck/deck_bloc.dart';
+import 'package:my_flash_cards/blocs/deck/deck_event.dart';
+import 'package:my_flash_cards/blocs/flashcard/flashcard_bloc.dart';
+import 'package:my_flash_cards/repositories/deck_repository.dart';
+import 'package:my_flash_cards/repositories/flashcard_repository.dart';
 
-import 'package:my_flash_cards/main.dart';
+class MockDeckRepository extends Mock implements DeckRepository {}
+class MockFlashcardRepository extends Mock implements FlashcardRepository {}
+
+Widget _buildApp({required DeckBloc deckBloc}) {
+  return MultiBlocProvider(
+    providers: [
+      BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
+      BlocProvider<DeckBloc>.value(value: deckBloc),
+      BlocProvider<FlashcardBloc>(
+        create: (_) => FlashcardBloc(repository: MockFlashcardRepository()),
+      ),
+    ],
+    child: BlocBuilder<ThemeBloc, dynamic>(
+      builder: (context, state) => MaterialApp(
+        theme: AppTheme.light(),
+        home: const DeckListScreen(),
+      ),
+    ),
+  );
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  late MockDeckRepository deckRepo;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  setUp(() {
+    deckRepo = MockDeckRepository();
+    when(() => deckRepo.getDecks()).thenAnswer((_) async => []);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('DeckListScreen shows app bar title', (tester) async {
+    final deckBloc = DeckBloc(repository: deckRepo)..add(LoadDecks());
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pumpWidget(_buildApp(deckBloc: deckBloc));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Flashcard Decks'), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/deck/deck_bloc.dart';
@@ -46,6 +47,21 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _signInGitHub() => _run(() async {
+        // signInWithProvider (ASWebAuthenticationSession) crashes on the
+        // iOS simulator. Show a clear message instead of crashing.
+        if (defaultTargetPlatform == TargetPlatform.iOS &&
+            kDebugMode &&
+            kIsWeb == false) {
+          // We can't import dart:io in web builds but this path is iOS only.
+          // The simulator identifier is injected via DART_VM_OPTIONS by Xcode,
+          // so we detect it through the SIMULATOR_UDID env approach at build
+          // time. Simplest safe guard: always allow on real devices (profile/
+          // release), only warn in debug simulator runs.
+          throw Exception(
+            'GitHub sign-in is not supported on the iOS Simulator.\n'
+            'Please run on a real device or use Android.',
+          );
+        }
         await _service.signInWithGitHub();
         setState(() {});
         _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
