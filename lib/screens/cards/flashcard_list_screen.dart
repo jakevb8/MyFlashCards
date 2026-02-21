@@ -75,14 +75,21 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
             if (state.flashcards.isEmpty) {
               return _EmptyState(deck: deck);
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.flashcards.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final card = state.flashcards[index];
-                return _CardTile(card: card, deck: deck);
-              },
+            return Column(
+              children: [
+                _SwipeHintBanner(message: 'Swipe left on a card to edit or delete'),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: state.flashcards.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final card = state.flashcards[index];
+                      return _CardTile(card: card, deck: deck);
+                    },
+                  ),
+                ),
+              ],
             );
           }
           return const SizedBox.shrink();
@@ -247,6 +254,33 @@ class _EmptyState extends StatelessWidget {
             'Tap "+ Add Card" to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.outline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SwipeHintBanner extends StatelessWidget {
+  final String message;
+  const _SwipeHintBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: cs.surfaceContainerHighest,
+      child: Row(
+        children: [
+          Icon(Icons.swipe_left_outlined, size: 16, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
             ),
           ),
         ],

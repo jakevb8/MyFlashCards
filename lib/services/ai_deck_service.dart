@@ -32,10 +32,22 @@ class GeminiDirectService implements CardGeneratorService {
   Future<List<CardSuggestion>> generateFromTopic(
     String topic, {
     int count = 15,
+    List<String> exclude = const [],
   }) async {
+    final excludeClause = exclude.isNotEmpty
+        ? '\nDo NOT generate cards for any of these already covered:\n${exclude.map((e) => '- $e').join('\n')}\n'
+        : '';
     final prompt = '''
 You are a flashcard creator. Generate exactly $count flashcard pairs for the following topic.
-Each card has a "front" (the question or prompt) and a "back" (the answer).
+
+Rules:
+- "front": the term, word, question, or prompt the learner sees first.
+  - For vocabulary or spelling topics: put the WORD ITSELF on the front (e.g. "cat"), never a spelled-out letter sequence like "c-a-t" or "What word is c-a-t?".
+  - For fact/concept topics: put a short question or prompt.
+- "back": the answer, definition, pronunciation hint, or explanation.
+  - For CVC / phonics words: give a simple definition or example sentence, e.g. "A small furry pet that meows."
+  - Keep backs concise — one sentence max.
+- Do NOT number the cards or add any extra keys.$excludeClause
 Return ONLY a valid JSON array with this exact shape:
 [{"front": "...", "back": "..."}, ...]
 

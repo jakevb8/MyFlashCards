@@ -10,7 +10,13 @@
 abstract class CardGeneratorService {
   /// Generate flashcard suggestions from a plain-text topic description.
   /// [count] controls how many cards to generate (default 15, range 5–30).
-  Future<List<CardSuggestion>> generateFromTopic(String topic, {int count = 15});
+  /// [exclude] is a list of front-text strings already shown — the AI will
+  /// try to avoid repeating them (used by "Load More").
+  Future<List<CardSuggestion>> generateFromTopic(
+    String topic, {
+    int count = 15,
+    List<String> exclude = const [],
+  });
 
   /// Generate flashcard suggestions from the text content of an uploaded file.
   Future<List<CardSuggestion>> generateFromText(String documentText);

@@ -120,6 +120,44 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
     }
   }
 
+  /// Fetches another batch and appends non-duplicate cards to the preview.
+  Future<void> _loadMore() async {
+    if (_kGeminiApiKey.isEmpty || _fileText != null) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+    try {
+      final existing = _suggestions.map((c) => c.front).toList();
+      final cards = await _service.generateFromTopic(
+        _topicController.text.trim(),
+        count: _cardCount,
+        exclude: existing,
+      );
+
+      int added = 0;
+      setState(() {
+        for (final c in cards) {
+          final alreadyShown = _suggestions.any(
+            (s) => _normalise(s.front) == _normalise(c.front),
+          );
+          if (!alreadyShown) {
+            _suggestions.add(_EditableCard(front: c.front, back: c.back));
+            added++;
+          }
+        }
+      });
+      if (added == 0) {
+        _snack('No new cards found — try rephrasing your topic.');
+      } else {
+        _snack('Added $added more cards to preview.');
+      }
+    } catch (e) {
+      _snack(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   // ── Duplicate detection ───────────────────────────────────────────────────
 
   /// Returns true if [candidate] is too similar to any existing card front.
@@ -500,7 +538,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
               // ── Card preview list ────────────────────────────────────────
               if (hasSuggestions)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                   sliver: SliverList.builder(
                     itemCount: _suggestions.length,
                     itemBuilder: (context, i) {
@@ -515,6 +553,19 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                         onEditBack: (v) => _suggestions[i].back = v,
                       );
                     },
+                  ),
+                ),
+
+              // ── Load More button ─────────────────────────────────────────
+              if (hasSuggestions && _fileText == null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    child: OutlinedButton.icon(
+                      onPressed: _loading ? null : _loadMore,
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Load More Cards'),
+                    ),
                   ),
                 ),
             ],

@@ -47,14 +47,21 @@ class DeckListScreen extends StatelessWidget {
             if (state.decks.isEmpty) {
               return _EmptyState();
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.decks.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final deck = state.decks[index];
-                return _DeckTile(deck: deck);
-              },
+            return Column(
+              children: [
+                _SwipeHintBanner(message: 'Swipe left on a deck to edit or delete'),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: state.decks.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final deck = state.decks[index];
+                      return _DeckTile(deck: deck);
+                    },
+                  ),
+                ),
+              ],
             );
           }
           return const SizedBox.shrink();
@@ -171,6 +178,32 @@ class _DeckTile extends StatelessWidget {
   }
 }
 
+class _SwipeHintBanner extends StatelessWidget {
+  final String message;
+  const _SwipeHintBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: cs.surfaceContainerHighest,
+      child: Row(
+        children: [
+          Icon(Icons.swipe_left_outlined, size: 16, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
