@@ -9,7 +9,14 @@ Feature: AI Deck Generation
     And I enter the topic "CVC words for a beginning reader"
     And I tap "Generate Cards"
     Then a new deck named "CVC Words For A Beginning Reader" should be created
-    And the deck should contain flashcards with CVC words on the front and pronunciation or meaning on the back
+    And the deck should contain flashcards with words on the front and definitions or examples on the back
+
+  Scenario: Card fronts contain the word itself, not a spelling question
+    Given I am on the AI generation screen
+    When I tap "Generate Cards" with topic "Animals"
+    Then each card front should contain the word or term itself (e.g. "cat")
+    And no card front should be phrased as "What word is spelled c-a-t?"
+    And card backs should be a concise one-sentence definition or example
 
   Scenario: Preview generated cards before saving
     Given I have entered the topic "CVC words for a beginning reader"
@@ -29,6 +36,18 @@ Feature: AI Deck Generation
     And I tap "Generate Cards"
     Then exactly 20 cards should be requested from the AI
 
+  Scenario: Load more cards without duplicates
+    Given I have previewed 15 generated cards for "Animals"
+    When I tap "Load More Cards"
+    Then the AI should be called again with the existing card fronts as an exclusion list
+    And any returned cards whose front matches an already-previewed card should be filtered out
+    And a snackbar should report how many new cards were added
+    And if no new unique cards are found a message "No new cards found — try rephrasing your topic." should appear
+
+  Scenario: Load More is not shown for file-based generation
+    Given I have uploaded a document and generated cards from it
+    Then the "Load More Cards" button should not be visible
+
   Scenario: Add generated cards to an existing deck with duplicate skipping
     Given I have an existing deck named "Animals"
     When I select "Animals" in the "Save to" dropdown
@@ -37,6 +56,12 @@ Feature: AI Deck Generation
     Then any cards whose front matches an existing card should be skipped
     And only new unique cards should be added to "Animals"
     And a snackbar should report how many were added and how many were skipped
+
+  Scenario: Saved cards and deck share the same ID
+    Given I tap "Generate Cards" with topic "Animals"
+    When I tap "Save"
+    Then the deck's ID and each flashcard's deckId should match
+    And all generated cards should appear when the deck is opened
 
   Scenario: Generate a deck from an uploaded text file
     Given I tap "Generate with AI"

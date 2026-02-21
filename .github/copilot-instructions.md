@@ -27,13 +27,17 @@ test/
   features/        # BDD .feature files (Gherkin specs)
 ```
 
-## Spec-Driven Development Rules
-1. **Write the `.feature` file or unit test FIRST**
+## ⚠️ MANDATORY: Spec-First, Spec-Last Rule
+**Every task MUST follow this checklist — do not skip any step:**
+1. **Write or update the `.feature` file FIRST** — before touching any `lib/` code
 2. Run it — confirm it fails (Red)
 3. Implement the minimum code to make it pass (Green)
 4. Refactor
-5. **Update `.feature` files whenever behaviour changes** — specs must always reflect current implemented behaviour, including new scenarios for every bug fix
-6. **Run `flutter test` before marking any request complete** — all tests must pass before committing
+5. **Update the `.feature` file AGAIN at the end** — add/edit scenarios to match the final implemented behaviour, including edge cases and bug fixes
+6. **Run `flutter test`** — all tests must pass before marking complete
+7. **Commit message must list which `.feature` files were changed**
+
+> If a task changes user-visible behaviour and no `.feature` file was updated, the task is **incomplete**.
 
 ## Code Conventions
 - All models must implement `Equatable` and have `toJson`/`fromJson`
