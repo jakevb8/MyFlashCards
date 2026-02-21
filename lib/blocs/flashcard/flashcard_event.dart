@@ -21,6 +21,15 @@ class AddFlashcard extends FlashcardEvent {
   List<Object?> get props => [flashcard];
 }
 
+/// Saves a batch of flashcards atomically and reloads once.
+/// Use this instead of firing multiple [AddFlashcard] events.
+class AddFlashcards extends FlashcardEvent {
+  final List<Flashcard> flashcards;
+  const AddFlashcards(this.flashcards);
+  @override
+  List<Object?> get props => [flashcards];
+}
+
 class UpdateFlashcard extends FlashcardEvent {
   final Flashcard flashcard;
   const UpdateFlashcard(this.flashcard);

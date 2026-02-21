@@ -10,7 +10,7 @@ const _kThemeModeKey = 'theme_mode';
 
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
   ThemeBloc({ThemeState? initialState})
-      : super(initialState ?? const ThemeState()) {
+    : super(initialState ?? const ThemeState()) {
     on<ChangeThemeType>(_onChangeThemeType);
     on<ToggleBrightness>(_onToggleBrightness);
     on<SetBrightness>(_onSetBrightness);
@@ -21,8 +21,10 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     final prefs = await SharedPreferences.getInstance();
     final typeIndex = prefs.getInt(_kThemeTypeKey) ?? 0;
     final modeIndex = prefs.getInt(_kThemeModeKey) ?? 0;
-    final themeType = AppThemeType.values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
-    final themeMode = ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
+    final themeType =
+        AppThemeType.values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
+    final themeMode =
+        ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
     return ThemeState(themeType: themeType, themeMode: themeMode);
   }
 

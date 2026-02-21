@@ -19,19 +19,22 @@ class GeminiDirectService implements CardGeneratorService {
   final String _apiKey;
 
   GenerativeModel get _model => GenerativeModel(
-        model: 'gemini-2.0-flash',
-        apiKey: _apiKey,
-        generationConfig: GenerationConfig(
-          responseMimeType: 'application/json',
-          temperature: 0.7,
-        ),
-      );
+    model: 'gemini-2.5-flash',
+    apiKey: _apiKey,
+    generationConfig: GenerationConfig(
+      responseMimeType: 'application/json',
+      temperature: 0.7,
+    ),
+  );
 
   /// Generate flashcard suggestions from a plain-text topic description.
   @override
-  Future<List<CardSuggestion>> generateFromTopic(String topic) async {
+  Future<List<CardSuggestion>> generateFromTopic(
+    String topic, {
+    int count = 15,
+  }) async {
     final prompt = '''
-You are a flashcard creator. Generate exactly 15 flashcard pairs for the following topic.
+You are a flashcard creator. Generate exactly $count flashcard pairs for the following topic.
 Each card has a "front" (the question or prompt) and a "back" (the answer).
 Return ONLY a valid JSON array with this exact shape:
 [{"front": "...", "back": "..."}, ...]
@@ -49,7 +52,8 @@ Topic: $topic
         ? documentText.substring(0, 8000)
         : documentText;
 
-    final prompt = '''
+    final prompt =
+        '''
 You are a flashcard creator. Read the following document and extract up to 20 
 key concepts, facts, vocabulary words, or important ideas. 
 For each one, create a flashcard with a "front" (question or term) and "back" (answer or definition).
@@ -76,10 +80,12 @@ $trimmed
     final list = jsonDecode(json) as List<dynamic>;
     return list
         .cast<Map<String, dynamic>>()
-        .map((e) => CardSuggestion(
-              front: e['front'] as String,
-              back: e['back'] as String,
-            ))
+        .map(
+          (e) => CardSuggestion(
+            front: e['front'] as String,
+            back: e['back'] as String,
+          ),
+        )
         .toList();
   }
 }

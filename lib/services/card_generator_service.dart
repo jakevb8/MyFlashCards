@@ -9,7 +9,8 @@
 /// are needed at that point.
 abstract class CardGeneratorService {
   /// Generate flashcard suggestions from a plain-text topic description.
-  Future<List<CardSuggestion>> generateFromTopic(String topic);
+  /// [count] controls how many cards to generate (default 15, range 5–30).
+  Future<List<CardSuggestion>> generateFromTopic(String topic, {int count = 15});
 
   /// Generate flashcard suggestions from the text content of an uploaded file.
   Future<List<CardSuggestion>> generateFromText(String documentText);
