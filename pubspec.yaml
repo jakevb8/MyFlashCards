@@ -1,0 +1,58 @@
+name: my_flash_cards
+description: "A cross-platform flashcard app with decks, randomization, and cloud backup."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.7
+
+  # Local storage
+  hive_ce_flutter: ^2.2.0
+
+  # Unique IDs
+  uuid: ^4.5.1
+
+  # Firebase (free tier - backup & auth)
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.6
+
+  # GitHub OAuth deep-link callback handler
+  app_links: ^6.4.0
+
+  # UI
+  flutter_slidable: ^3.1.1
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+  # BDD spec testing
+  bdd_widget_test: ^1.6.4
+
+  # Mocking
+  mocktail: ^1.0.4
+
+  # BLoC testing helper
+  bloc_test: ^10.0.0
+
+  # Hive code generation
+  hive_ce_generator: ^1.8.0
+  build_runner: ^2.4.14
+
+flutter:
+  uses-material-design: true
