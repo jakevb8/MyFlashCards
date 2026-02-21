@@ -5,6 +5,7 @@ import '../../blocs/deck/deck_bloc.dart';
 import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
 import '../../models/deck.dart';
+import '../../widgets/theme_picker_sheet.dart';
 import '../cards/flashcard_list_screen.dart';
 import 'deck_form_screen.dart';
 
@@ -17,6 +18,11 @@ class DeckListScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Flashcard Decks'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.palette_outlined),
+            tooltip: 'Change Theme',
+            onPressed: () => ThemePickerSheet.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.cloud_upload_outlined),
             tooltip: 'Backup to Cloud',

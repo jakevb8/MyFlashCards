@@ -4,6 +4,8 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'blocs/deck/deck_bloc.dart';
 import 'blocs/deck/deck_event.dart';
 import 'blocs/flashcard/flashcard_bloc.dart';
+import 'blocs/theme/theme_bloc.dart';
+import 'blocs/theme/theme_state.dart';
 import 'core/theme/app_theme.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
@@ -41,6 +43,7 @@ class MyFlashCardsApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
+          BlocProvider(create: (_) => ThemeBloc()),
           BlocProvider(
             create: (ctx) =>
                 DeckBloc(repository: ctx.read<HiveDeckRepository>())
@@ -51,13 +54,17 @@ class MyFlashCardsApp extends StatelessWidget {
                 FlashcardBloc(repository: ctx.read<HiveFlashcardRepository>()),
           ),
         ],
-        child: MaterialApp(
-          title: 'My Flash Cards',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: ThemeMode.system,
-          home: const DeckListScreen(),
+        child: BlocBuilder<ThemeBloc, ThemeState>(
+          builder: (context, themeState) {
+            return MaterialApp(
+              title: 'My Flash Cards',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(themeState.themeType),
+              darkTheme: AppTheme.dark(themeState.themeType),
+              themeMode: themeState.themeMode,
+              home: const DeckListScreen(),
+            );
+          },
         ),
       ),
     );
