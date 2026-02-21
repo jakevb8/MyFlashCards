@@ -19,6 +19,11 @@ class DeckListScreen extends StatelessWidget {
         title: const Text('My Flashcard Decks'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            tooltip: 'Generate with AI',
+            onPressed: () => Navigator.pushNamed(context, '/generate'),
+          ),
+          IconButton(
             icon: const Icon(Icons.palette_outlined),
             tooltip: 'Change Theme',
             onPressed: () => ThemePickerSheet.show(context),

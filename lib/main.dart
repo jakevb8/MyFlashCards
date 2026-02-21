@@ -15,6 +15,7 @@ import 'repositories/hive_deck_repository.dart';
 import 'repositories/hive_flashcard_repository.dart';
 import 'screens/decks/deck_list_screen.dart';
 import 'screens/backup/backup_screen.dart';
+import 'screens/generate/ai_generate_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,7 +67,10 @@ class MyFlashCardsApp extends StatelessWidget {
               darkTheme: AppTheme.dark(themeState.themeType),
               themeMode: themeState.themeMode,
               home: const DeckListScreen(),
-              routes: {'/backup': (_) => const BackupScreen()},
+              routes: {
+                '/backup': (_) => const BackupScreen(),
+                '/generate': (_) => const AiGenerateScreen(),
+              },
             );
           },
         ),
