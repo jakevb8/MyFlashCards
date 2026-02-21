@@ -32,6 +32,7 @@ test/
 2. Run it — confirm it fails (Red)
 3. Implement the minimum code to make it pass (Green)
 4. Refactor
+5. **Run `flutter test` before marking any request complete** — all tests must pass before committing
 
 ## Code Conventions
 - All models must implement `Equatable` and have `toJson`/`fromJson`
