@@ -30,20 +30,24 @@ class ThemePickerSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Choose Theme',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      )),
+              Text(
+                'Choose Theme',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 16),
               _themeGrid(context, state),
               const SizedBox(height: 24),
               const Divider(),
               const SizedBox(height: 8),
-              Text('Brightness',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                        letterSpacing: 1,
-                      )),
+              Text(
+                'Brightness',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                  letterSpacing: 1,
+                ),
+              ),
               const SizedBox(height: 12),
               _brightnessRow(context, state),
             ],
@@ -91,7 +95,7 @@ class ThemePickerSheet extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 2.6,
+      childAspectRatio: 2.3,
       children: [
         for (final t in themes)
           _ThemeCard(
@@ -100,8 +104,7 @@ class ThemePickerSheet extends StatelessWidget {
             icon: t.icon,
             color: t.color,
             selected: state.themeType == t.type,
-            onTap: () =>
-                context.read<ThemeBloc>().add(ChangeThemeType(t.type)),
+            onTap: () => context.read<ThemeBloc>().add(ChangeThemeType(t.type)),
           ),
       ],
     );
@@ -154,43 +157,50 @@ class _ThemeCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.15) : cs.surfaceContainerHighest,
+          color: selected
+              ? color.withValues(alpha: 0.15)
+              : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? color : Colors.transparent,
             width: 2,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 18,
+              radius: 16,
               backgroundColor: color,
-              child: Icon(icon, color: Colors.white, size: 16),
+              child: Icon(icon, color: Colors.white, size: 14),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: selected ? color : cs.onSurface,
-                      )),
-                  Text(desc,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: cs.outline,
-                      )),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: selected ? color : cs.onSurface,
+                    ),
+                  ),
+                  Text(
+                    desc,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 10, color: cs.outline),
+                  ),
                 ],
               ),
             ),
-            if (selected)
-              Icon(Icons.check_circle, color: color, size: 18),
+            if (selected) Icon(Icons.check_circle, color: color, size: 16),
           ],
         ),
       ),
