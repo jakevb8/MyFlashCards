@@ -3,11 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/deck/deck_bloc.dart';
+import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
 import '../../blocs/flashcard/flashcard_bloc.dart';
 import '../../blocs/flashcard/flashcard_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
+import '../../repositories/hive_deck_repository.dart';
+import '../../repositories/hive_flashcard_repository.dart';
 import '../../services/firebase_backup_service.dart';
 
 class BackupScreen extends StatefulWidget {
@@ -89,11 +92,21 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _restore() => _run(() async {
     final decks = await _service.restoreDecks();
     final cards = await _service.restoreFlashcards();
-    _snack(
-      'Restored ${decks.length} decks and ${cards.length} cards ✓\n'
-      'Restart the app to see changes.',
-      isError: false,
-    );
+
+    // Write restored data into Hive so it's persisted locally.
+    final deckRepo = context.read<HiveDeckRepository>();
+    final cardRepo = context.read<HiveFlashcardRepository>();
+    for (final deck in decks) {
+      await deckRepo.addDeck(deck);
+    }
+    for (final card in cards) {
+      await cardRepo.addFlashcard(card);
+    }
+
+    // Reload DeckBloc so the deck list screen updates immediately.
+    if (mounted) context.read<DeckBloc>().add(LoadDecks());
+
+    _snack('Restored ${decks.length} decks and ${cards.length} cards ✓');
   });
 
   @override

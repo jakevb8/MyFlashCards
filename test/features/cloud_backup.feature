@@ -27,9 +27,9 @@ Feature: Cloud Backup
     Given I am signed in
     And Firestore contains 3 decks and 8 flashcards for my account
     When I tap "Restore"
-    Then 3 decks and 8 flashcards should be downloaded
+    Then 3 decks and 8 flashcards should be written to local storage
+    And the deck list should update immediately without restarting the app
     And I should see "Restored 3 decks and 8 cards"
-    And the deck list should update without restarting the app
 
   Scenario: Cannot back up when not signed in
     Given I am not signed in
