@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'blocs/deck/deck_bloc.dart';
 import 'blocs/deck/deck_event.dart';
@@ -7,6 +8,7 @@ import 'blocs/flashcard/flashcard_bloc.dart';
 import 'blocs/theme/theme_bloc.dart';
 import 'blocs/theme/theme_state.dart';
 import 'core/theme/app_theme.dart';
+import 'firebase_options.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
 import 'repositories/hive_deck_repository.dart';
@@ -24,10 +26,7 @@ Future<void> main() async {
   await HiveDeckRepository.init();
   await HiveFlashcardRepository.init();
 
-  // NOTE: To enable Firebase backup, follow README.md setup steps,
-  // then uncomment the line below and add your google-services.json /
-  // GoogleService-Info.plist files to the respective platform folders.
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyFlashCardsApp());
 }

@@ -1,74 +1,204 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/deck/deck_bloc.dart';
+import '../../blocs/deck/deck_state.dart';
+import '../../blocs/flashcard/flashcard_bloc.dart';
+import '../../blocs/flashcard/flashcard_state.dart';
+import '../../models/deck.dart';
+import '../../models/flashcard.dart';
+import '../../services/firebase_backup_service.dart';
 
-class BackupScreen extends StatelessWidget {
+class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
+
+  @override
+  State<BackupScreen> createState() => _BackupScreenState();
+}
+
+class _BackupScreenState extends State<BackupScreen> {
+  final _service = FirebaseBackupService();
+  bool _loading = false;
+
+  User? get _user => _service.currentUser;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _loading = true);
+    try {
+      await action();
+    } on FirebaseAuthException catch (e) {
+      _snack(e.message ?? e.code, isError: true);
+    } catch (e) {
+      _snack(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor:
+          isError ? Theme.of(context).colorScheme.error : null,
+    ));
+  }
+
+  Future<void> _signInGitHub() => _run(() async {
+        await _service.signInWithGitHub();
+        setState(() {});
+        _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
+      });
+
+  Future<void> _signOut() => _run(() async {
+        await _service.signOut();
+        setState(() {});
+        _snack('Signed out');
+      });
+
+  Future<void> _backup() => _run(() async {
+        final deckState = context.read<DeckBloc>().state;
+        final cardState = context.read<FlashcardBloc>().state;
+        final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
+        final cards =
+            cardState is FlashcardLoaded ? cardState.flashcards : <Flashcard>[];
+        await _service.backupDecks(decks);
+        await _service.backupFlashcards(cards);
+        _snack('Backed up ${decks.length} decks and ${cards.length} cards ✓');
+      });
+
+  Future<void> _restore() => _run(() async {
+        final decks = await _service.restoreDecks();
+        final cards = await _service.restoreFlashcards();
+        _snack(
+            'Restored ${decks.length} decks and ${cards.length} cards ✓\n'
+            'Restart the app to see changes.',
+            isError: false);
+      });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final signedIn = _service.isSignedIn;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Cloud Backup')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
+      body: Stack(
         children: [
-          Icon(Icons.cloud_sync_outlined, size: 72, color: cs.primary),
-          const SizedBox(height: 16),
-          Text(
-            'Back up your decks to Firebase',
-            textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+          ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Icon(Icons.cloud_sync_outlined, size: 72, color: cs.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Back up your decks to Firebase',
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Sign in to sync your flashcards across devices.\n'
+                'Firebase Spark (free tier) — no cost to you.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: cs.outline),
+              ),
+              const SizedBox(height: 32),
+              if (!signedIn) ...[
+                _ActionCard(
+                  icon: Icons.code,
+                  title: 'Sign in with GitHub',
+                  subtitle: 'OAuth — opens a secure browser window',
+                  onTap: _loading ? null : _signInGitHub,
+                ),
+              ] else ...[
+                _UserCard(user: _user!, onSignOut: _loading ? null : _signOut),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  'Actions',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.outline,
+                        letterSpacing: 1,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  icon: Icons.cloud_upload_outlined,
+                  title: 'Back Up Now',
+                  subtitle: 'Upload all decks and cards to Firestore',
+                  onTap: _loading ? null : _backup,
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  icon: Icons.cloud_download_outlined,
+                  title: 'Restore',
+                  subtitle: 'Download your decks and cards from Firestore',
+                  onTap: _loading ? null : _restore,
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Sign in to sync your flashcards across devices.\n'
-            'Firebase Spark (free tier) is used — no cost to you.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: cs.outline),
-          ),
-          const SizedBox(height: 32),
-          _ActionCard(
-            icon: Icons.email_outlined,
-            title: 'Sign in with Email',
-            subtitle: 'Use an email & password account',
-            onTap: () => _showComingSoon(context),
-          ),
-          const SizedBox(height: 12),
-          _ActionCard(
-            icon: Icons.code,
-            title: 'Sign in with GitHub',
-            subtitle: 'OAuth via Firebase — requires setup',
-            onTap: () => _showComingSoon(context),
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 16),
-          Text(
-            'Setup required',
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(color: cs.outline, letterSpacing: 1),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Run `flutterfire configure` and add your google-services.json '
-            '/ GoogleService-Info.plist to enable backup. See README.md for '
-            'step-by-step instructions.',
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-          ),
+          if (_loading)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black26,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
         ],
       ),
     );
   }
+}
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Firebase setup required — see README.md'),
-        behavior: SnackBarBehavior.floating,
+class _UserCard extends StatelessWidget {
+  final User user;
+  final VoidCallback? onSignOut;
+  const _UserCard({required this.user, this.onSignOut});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: cs.primaryContainer,
+              backgroundImage: user.photoURL != null
+                  ? NetworkImage(user.photoURL!)
+                  : null,
+              child: user.photoURL == null
+                  ? Icon(Icons.person, color: cs.onPrimaryContainer)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(user.displayName ?? 'Signed in',
+                      style:
+                          const TextStyle(fontWeight: FontWeight.w600)),
+                  if (user.email != null)
+                    Text(user.email!,
+                        style: TextStyle(
+                            fontSize: 12, color: cs.outline)),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: onSignOut,
+              child: const Text('Sign out'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -78,13 +208,13 @@ class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActionCard({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
@@ -96,7 +226,11 @@ class _ActionCard extends StatelessWidget {
           backgroundColor: cs.primaryContainer,
           child: Icon(icon, color: cs.onPrimaryContainer),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: onTap == null ? cs.outline : null,
+            )),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
