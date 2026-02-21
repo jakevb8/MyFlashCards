@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_flash_cards/blocs/theme/theme_bloc.dart';
 import 'package:my_flash_cards/blocs/theme/theme_event.dart';
 import 'package:my_flash_cards/blocs/theme/theme_state.dart';
 import 'package:my_flash_cards/core/theme/app_theme.dart';
 
 void main() {
+  setUp(() {
+    // Provide an in-memory SharedPreferences so _save() doesn't throw in tests.
+    SharedPreferences.setMockInitialValues({});
+  });
   group('ThemeBloc', () {
     test('initial state is classic theme with system brightness', () {
       final bloc = ThemeBloc();
@@ -21,7 +26,9 @@ void main() {
       act: (b) => b.add(const ChangeThemeType(AppThemeType.oceanBlue)),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.oceanBlue, themeMode: ThemeMode.system),
+          themeType: AppThemeType.oceanBlue,
+          themeMode: ThemeMode.system,
+        ),
       ],
     );
 
@@ -31,7 +38,9 @@ void main() {
       act: (b) => b.add(const ChangeThemeType(AppThemeType.roseGarden)),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.roseGarden, themeMode: ThemeMode.system),
+          themeType: AppThemeType.roseGarden,
+          themeMode: ThemeMode.system,
+        ),
       ],
     );
 
@@ -41,7 +50,9 @@ void main() {
       act: (b) => b.add(const ChangeThemeType(AppThemeType.executive)),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.executive, themeMode: ThemeMode.system),
+          themeType: AppThemeType.executive,
+          themeMode: ThemeMode.system,
+        ),
       ],
     );
 
@@ -54,11 +65,17 @@ void main() {
         ..add(ToggleBrightness()),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.classic, themeMode: ThemeMode.dark),
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.dark,
+        ),
         const ThemeState(
-            themeType: AppThemeType.classic, themeMode: ThemeMode.light),
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.light,
+        ),
         const ThemeState(
-            themeType: AppThemeType.classic, themeMode: ThemeMode.system),
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.system,
+        ),
       ],
     );
 
@@ -68,7 +85,9 @@ void main() {
       act: (b) => b.add(const SetBrightness(ThemeMode.dark)),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.classic, themeMode: ThemeMode.dark),
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.dark,
+        ),
       ],
     );
 
@@ -80,9 +99,13 @@ void main() {
         ..add(const SetBrightness(ThemeMode.dark)),
       expect: () => [
         const ThemeState(
-            themeType: AppThemeType.roseGarden, themeMode: ThemeMode.system),
+          themeType: AppThemeType.roseGarden,
+          themeMode: ThemeMode.system,
+        ),
         const ThemeState(
-            themeType: AppThemeType.roseGarden, themeMode: ThemeMode.dark),
+          themeType: AppThemeType.roseGarden,
+          themeMode: ThemeMode.dark,
+        ),
       ],
     );
   });

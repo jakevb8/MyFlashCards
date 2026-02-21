@@ -38,60 +38,63 @@ class _BackupScreenState extends State<BackupScreen> {
 
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor:
-          isError ? Theme.of(context).colorScheme.error : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+      ),
+    );
   }
 
   Future<void> _signInGitHub() => _run(() async {
-        // signInWithProvider (ASWebAuthenticationSession) crashes on the
-        // iOS simulator. Show a clear message instead of crashing.
-        if (defaultTargetPlatform == TargetPlatform.iOS &&
-            kDebugMode &&
-            kIsWeb == false) {
-          // We can't import dart:io in web builds but this path is iOS only.
-          // The simulator identifier is injected via DART_VM_OPTIONS by Xcode,
-          // so we detect it through the SIMULATOR_UDID env approach at build
-          // time. Simplest safe guard: always allow on real devices (profile/
-          // release), only warn in debug simulator runs.
-          throw Exception(
-            'GitHub sign-in is not supported on the iOS Simulator.\n'
-            'Please run on a real device or use Android.',
-          );
-        }
-        await _service.signInWithGitHub();
-        setState(() {});
-        _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
-      });
+    // signInWithProvider (ASWebAuthenticationSession) crashes on the
+    // iOS simulator. Show a clear message instead of crashing.
+    if (defaultTargetPlatform == TargetPlatform.iOS &&
+        kDebugMode &&
+        kIsWeb == false) {
+      // We can't import dart:io in web builds but this path is iOS only.
+      // The simulator identifier is injected via DART_VM_OPTIONS by Xcode,
+      // so we detect it through the SIMULATOR_UDID env approach at build
+      // time. Simplest safe guard: always allow on real devices (profile/
+      // release), only warn in debug simulator runs.
+      throw Exception(
+        'GitHub sign-in is not supported on the iOS Simulator.\n'
+        'Please run on a real device or use Android.',
+      );
+    }
+    await _service.signInWithGitHub();
+    setState(() {});
+    _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
+  });
 
   Future<void> _signOut() => _run(() async {
-        await _service.signOut();
-        setState(() {});
-        _snack('Signed out');
-      });
+    await _service.signOut();
+    setState(() {});
+    _snack('Signed out');
+  });
 
   Future<void> _backup() => _run(() async {
-        final deckState = context.read<DeckBloc>().state;
-        final cardState = context.read<FlashcardBloc>().state;
-        final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
-        final cards =
-            cardState is FlashcardLoaded ? cardState.flashcards : <Flashcard>[];
-        await _service.backupDecks(decks);
-        await _service.backupFlashcards(cards);
-        _snack('Backed up ${decks.length} decks and ${cards.length} cards ✓');
-      });
+    final deckState = context.read<DeckBloc>().state;
+    final cardState = context.read<FlashcardBloc>().state;
+    final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
+    final cards = cardState is FlashcardLoaded
+        ? cardState.flashcards
+        : <Flashcard>[];
+    await _service.backupDecks(decks);
+    await _service.backupFlashcards(cards);
+    _snack('Backed up ${decks.length} decks and ${cards.length} cards ✓');
+  });
 
   Future<void> _restore() => _run(() async {
-        final decks = await _service.restoreDecks();
-        final cards = await _service.restoreFlashcards();
-        _snack(
-            'Restored ${decks.length} decks and ${cards.length} cards ✓\n'
-            'Restart the app to see changes.',
-            isError: false);
-      });
+    final decks = await _service.restoreDecks();
+    final cards = await _service.restoreFlashcards();
+    _snack(
+      'Restored ${decks.length} decks and ${cards.length} cards ✓\n'
+      'Restart the app to see changes.',
+      isError: false,
+    );
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -110,10 +113,9 @@ class _BackupScreenState extends State<BackupScreen> {
               Text(
                 'Back up your decks to Firebase',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -138,9 +140,9 @@ class _BackupScreenState extends State<BackupScreen> {
                 Text(
                   'Actions',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.outline,
-                        letterSpacing: 1,
-                      ),
+                    color: cs.outline,
+                    letterSpacing: 1,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _ActionCard(
@@ -199,20 +201,19 @@ class _UserCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(user.displayName ?? 'Signed in',
-                      style:
-                          const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    user.displayName ?? 'Signed in',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   if (user.email != null)
-                    Text(user.email!,
-                        style: TextStyle(
-                            fontSize: 12, color: cs.outline)),
+                    Text(
+                      user.email!,
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
                 ],
               ),
             ),
-            TextButton(
-              onPressed: onSignOut,
-              child: const Text('Sign out'),
-            ),
+            TextButton(onPressed: onSignOut, child: const Text('Sign out')),
           ],
         ),
       ),
@@ -242,11 +243,13 @@ class _ActionCard extends StatelessWidget {
           backgroundColor: cs.primaryContainer,
           child: Icon(icon, color: cs.onPrimaryContainer),
         ),
-        title: Text(title,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: onTap == null ? cs.outline : null,
-            )),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: onTap == null ? cs.outline : null,
+          ),
+        ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,

@@ -20,10 +20,22 @@ class AppTheme {
   // ── Seed colours per theme ─────────────────────────────────────────────────
 
   static const _seeds = {
-    AppThemeType.oceanBlue: (primary: Color(0xFF0369A1), secondary: Color(0xFF0891B2)),   // Sky-700 / Cyan-600
-    AppThemeType.roseGarden: (primary: Color(0xFFBE185D), secondary: Color(0xFF9333EA)),  // Rose-700 / Purple-600
-    AppThemeType.executive: (primary: Color(0xFF0F766E), secondary: Color(0xFF334155)),   // Teal-700 / Slate-700
-    AppThemeType.classic: (primary: Color(0xFF4F46E5), secondary: Color(0xFF7C3AED)),     // Indigo-600 / Violet-600
+    AppThemeType.oceanBlue: (
+      primary: Color(0xFF0369A1),
+      secondary: Color(0xFF0891B2),
+    ), // Sky-700 / Cyan-600
+    AppThemeType.roseGarden: (
+      primary: Color(0xFFBE185D),
+      secondary: Color(0xFF9333EA),
+    ), // Rose-700 / Purple-600
+    AppThemeType.executive: (
+      primary: Color(0xFF0F766E),
+      secondary: Color(0xFF334155),
+    ), // Teal-700 / Slate-700
+    AppThemeType.classic: (
+      primary: Color(0xFF4F46E5),
+      secondary: Color(0xFF7C3AED),
+    ), // Indigo-600 / Violet-600
   };
 
   static const _fonts = {

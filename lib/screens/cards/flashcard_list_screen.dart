@@ -9,9 +9,22 @@ import '../../models/flashcard.dart';
 import '../study/study_screen.dart';
 import 'flashcard_form_screen.dart';
 
-class FlashcardListScreen extends StatelessWidget {
+class FlashcardListScreen extends StatefulWidget {
   final Deck deck;
   const FlashcardListScreen({super.key, required this.deck});
+
+  @override
+  State<FlashcardListScreen> createState() => _FlashcardListScreenState();
+}
+
+class _FlashcardListScreenState extends State<FlashcardListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<FlashcardBloc>().add(LoadFlashcards(widget.deck.id));
+  }
+
+  Deck get deck => widget.deck;
 
   @override
   Widget build(BuildContext context) {

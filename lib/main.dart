@@ -28,11 +28,14 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const MyFlashCardsApp());
+  final savedTheme = await ThemeBloc.loadSaved();
+
+  runApp(MyFlashCardsApp(initialTheme: savedTheme));
 }
 
 class MyFlashCardsApp extends StatelessWidget {
-  const MyFlashCardsApp({super.key});
+  final ThemeState initialTheme;
+  const MyFlashCardsApp({super.key, required this.initialTheme});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +46,7 @@ class MyFlashCardsApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => ThemeBloc()),
+          BlocProvider(create: (_) => ThemeBloc(initialState: initialTheme)),
           BlocProvider(
             create: (ctx) =>
                 DeckBloc(repository: ctx.read<HiveDeckRepository>())
@@ -63,9 +66,7 @@ class MyFlashCardsApp extends StatelessWidget {
               darkTheme: AppTheme.dark(themeState.themeType),
               themeMode: themeState.themeMode,
               home: const DeckListScreen(),
-              routes: {
-                '/backup': (_) => const BackupScreen(),
-              },
+              routes: {'/backup': (_) => const BackupScreen()},
             );
           },
         ),

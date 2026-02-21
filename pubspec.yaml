@@ -24,12 +24,15 @@ dependencies:
   uuid: ^4.5.1
 
   # Firebase (free tier - backup & auth)
-  firebase_core: ^3.13.0
-  firebase_auth: ^5.5.2
-  cloud_firestore: ^5.6.6
+  firebase_core: ^4.4.0
+  firebase_auth: ^6.1.4
+  cloud_firestore: ^6.1.2
 
   # GitHub OAuth deep-link callback handler
   app_links: ^6.4.0
+
+  # Theme persistence
+  shared_preferences: ^2.5.3
 
   # UI
   flutter_slidable: ^3.1.1

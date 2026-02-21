@@ -10,8 +10,10 @@ import 'package:my_flash_cards/blocs/deck/deck_event.dart';
 import 'package:my_flash_cards/blocs/flashcard/flashcard_bloc.dart';
 import 'package:my_flash_cards/repositories/deck_repository.dart';
 import 'package:my_flash_cards/repositories/flashcard_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockDeckRepository extends Mock implements DeckRepository {}
+
 class MockFlashcardRepository extends Mock implements FlashcardRepository {}
 
 Widget _buildApp({required DeckBloc deckBloc}) {
@@ -24,10 +26,8 @@ Widget _buildApp({required DeckBloc deckBloc}) {
       ),
     ],
     child: BlocBuilder<ThemeBloc, dynamic>(
-      builder: (context, state) => MaterialApp(
-        theme: AppTheme.light(),
-        home: const DeckListScreen(),
-      ),
+      builder: (context, state) =>
+          MaterialApp(theme: AppTheme.light(), home: const DeckListScreen()),
     ),
   );
 }
@@ -36,6 +36,7 @@ void main() {
   late MockDeckRepository deckRepo;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     deckRepo = MockDeckRepository();
     when(() => deckRepo.getDecks()).thenAnswer((_) async => []);
   });
