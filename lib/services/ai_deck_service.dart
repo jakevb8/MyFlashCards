@@ -1,15 +1,20 @@
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'card_generator_service.dart';
 
-/// A single card suggestion returned by the AI before the user saves the deck.
-class CardSuggestion {
-  final String front;
-  final String back;
-  CardSuggestion({required this.front, required this.back});
-}
+export 'card_generator_service.dart' show CardSuggestion, CardGeneratorService;
 
-class AiDeckService {
-  AiDeckService(this._apiKey);
+/// Calls the Gemini API directly from the app using an API key.
+///
+/// ✅ Works on the Firebase Spark (free) plan — no outbound networking
+/// restriction applies because the call goes from the device, not a Function.
+///
+/// When you're ready to release publicly, swap this for
+/// [FirebaseFunctionGeneratorService] and deploy the Cloud Function.
+/// The rest of the app is unchanged — [AiGenerateScreen] depends only on
+/// [CardGeneratorService].
+class GeminiDirectService implements CardGeneratorService {
+  GeminiDirectService(this._apiKey);
 
   final String _apiKey;
 
@@ -23,6 +28,7 @@ class AiDeckService {
       );
 
   /// Generate flashcard suggestions from a plain-text topic description.
+  @override
   Future<List<CardSuggestion>> generateFromTopic(String topic) async {
     final prompt = '''
 You are a flashcard creator. Generate exactly 15 flashcard pairs for the following topic.
@@ -36,6 +42,7 @@ Topic: $topic
   }
 
   /// Generate flashcard suggestions from document text (PDF/txt content).
+  @override
   Future<List<CardSuggestion>> generateFromText(String documentText) async {
     // Trim to ~8000 chars to stay well within token limits on free tier
     final trimmed = documentText.length > 8000

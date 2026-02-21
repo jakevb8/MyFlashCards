@@ -12,8 +12,12 @@ import '../../models/flashcard.dart';
 import '../../services/ai_deck_service.dart';
 
 // ---------------------------------------------------------------------------
-// Replace this with your actual Gemini API key, or load from env / config.
+// API key is loaded from --dart-define=GEMINI_API_KEY=your_key at run time.
 // Get a free key at: https://aistudio.google.com/app/apikey
+//
+// When ready to release publicly, see:
+//   lib/services/firebase_function_generator_service.dart
+// for the one-line swap to use a Firebase Cloud Function instead.
 // ---------------------------------------------------------------------------
 const _kGeminiApiKey = String.fromEnvironment(
   'GEMINI_API_KEY',
@@ -28,7 +32,9 @@ class AiGenerateScreen extends StatefulWidget {
 }
 
 class _AiGenerateScreenState extends State<AiGenerateScreen> {
-  final _service = AiDeckService(_kGeminiApiKey);
+  // Typed as the abstract interface — swap to FirebaseFunctionGeneratorService
+  // when upgrading to Blaze plan. See firebase_function_generator_service.dart.
+  final CardGeneratorService _service = GeminiDirectService(_kGeminiApiKey);
   final _topicController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
