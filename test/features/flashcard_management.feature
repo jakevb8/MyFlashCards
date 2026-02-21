@@ -3,6 +3,11 @@ Feature: Flashcard Management
   I want to add and manage flashcards within a deck
   So that I can create study material
 
+  Scenario: Cards load automatically when opening a deck
+    Given I have a deck named "French Words" with 3 cards
+    When I open the deck
+    Then I should see all 3 cards immediately
+
   Scenario: Add a flashcard to a deck
     Given I have a deck named "French Words"
     When I add a card with front "Bonjour" and back "Hello"

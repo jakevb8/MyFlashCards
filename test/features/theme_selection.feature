@@ -8,6 +8,12 @@ Feature: Theme Selection
     Then the active theme should be "Classic"
     And the brightness should be "system"
 
+  Scenario: Theme choice persists across app restarts
+    Given I have selected the "Ocean Blue" theme with "Dark" brightness
+    When I close and relaunch the app
+    Then the active theme should be "Ocean Blue"
+    And the brightness should be "dark"
+
   Scenario: Switch to Ocean Blue theme
     Given the app is on the "Classic" theme
     When I open the theme picker

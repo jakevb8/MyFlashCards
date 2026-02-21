@@ -23,12 +23,13 @@ Feature: Cloud Backup
     And all 5 flashcards should be uploaded to Firestore
     And I should see "Backed up 2 decks and 5 cards"
 
-  Scenario: Restore decks and flashcards
+  Scenario: Restore decks and flashcards reloads app state
     Given I am signed in
     And Firestore contains 3 decks and 8 flashcards for my account
     When I tap "Restore"
     Then 3 decks and 8 flashcards should be downloaded
     And I should see "Restored 3 decks and 8 cards"
+    And the deck list should update without restarting the app
 
   Scenario: Cannot back up when not signed in
     Given I am not signed in
