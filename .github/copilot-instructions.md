@@ -54,6 +54,16 @@ test/
 - Use `blocTest` from `bloc_test` for BLoC tests
 - Use `mocktail` for mocking repository dependencies
 
+## CI / Branch Protection
+Two GitHub Actions workflows enforce quality on every PR:
+- **`ci.yml`** — runs `flutter analyze`, `dart format`, and `flutter test --coverage` on every push and PR
+- **`spec-guard.yml`** — **blocks merge** if any `lib/` file changed but no `test/features/*.feature` file was updated
+
+To enforce spec-guard as a required check:
+1. Go to GitHub → Settings → Branches → Add rule for `main`
+2. Enable **"Require status checks to pass"**
+3. Add both `Flutter Tests` and `Enforce Spec-First / Spec-Last Rule` as required checks
+
 ## Firebase Backup (Free Tier)
 - Anonymous auth or email/password via `FirebaseBackupService`
 - Firestore structure: `users/{uid}/decks/{deckId}` and `users/{uid}/flashcards/{cardId}`

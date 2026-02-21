@@ -1,0 +1,60 @@
+name: Spec Guard
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  spec-guard:
+    name: Enforce Spec-First / Spec-Last Rule
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch enough history to diff against the PR base
+          fetch-depth: 0
+
+      - name: Check that .feature files were updated alongside lib/ changes
+        id: spec_check
+        shell: bash
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          echo "Diffing $BASE..$HEAD"
+
+          # Files changed in this PR
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Did any lib/ source files change?
+          LIB_CHANGED=$(echo "$CHANGED" | grep -E '^lib/' || true)
+
+          # Did any .feature specs change?
+          FEATURE_CHANGED=$(echo "$CHANGED" | grep -E '\.feature$' || true)
+
+          if [ -n "$LIB_CHANGED" ] && [ -z "$FEATURE_CHANGED" ]; then
+            echo ""
+            echo "❌ SPEC GUARD FAILED"
+            echo ""
+            echo "The following lib/ files were changed but no .feature file was updated:"
+            echo "$LIB_CHANGED"
+            echo ""
+            echo "Rules:"
+            echo "  1. Write or update the .feature file FIRST (before lib/ changes)"
+            echo "  2. Update the .feature file AGAIN at the end to match final behaviour"
+            echo "  3. Every user-visible behaviour change must have a corresponding scenario"
+            echo ""
+            echo "Feature files live in: test/features/*.feature"
+            exit 1
+          fi
+
+          if [ -z "$LIB_CHANGED" ]; then
+            echo "✅ No lib/ changes detected — spec check not required."
+          else
+            echo "✅ Spec guard passed — .feature file(s) updated alongside lib/ changes:"
+            echo "$FEATURE_CHANGED"
+          fi
