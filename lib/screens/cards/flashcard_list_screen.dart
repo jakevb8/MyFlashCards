@@ -457,14 +457,10 @@ class _ArchivedCardTile extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // Show mastered star badge
+                  // Show mastered star badge — 3 filled stars
                   Icon(Icons.star, size: 16, color: cs.outline),
                   Icon(Icons.star, size: 16, color: cs.outline),
-                  const SizedBox(width: 2),
-                  Text(
-                    '3/3',
-                    style: TextStyle(fontSize: 10, color: cs.outline),
-                  ),
+                  Icon(Icons.star, size: 16, color: cs.outline),
                 ],
               ),
               const SizedBox(height: 4),
