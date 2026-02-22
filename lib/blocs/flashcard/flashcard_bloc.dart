@@ -111,15 +111,16 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
   }
 
   /// Increment star count. At 3 stars → archive the card and reset stars.
-  Future<void> _onStarCard(
-    StarCard event,
-    Emitter<FlashcardState> emit,
-  ) async {
+  Future<void> _onStarCard(StarCard event, Emitter<FlashcardState> emit) async {
     try {
       final card = await repository.getFlashcard(event.id);
       final newStars = card.starCount + 1;
       final updated = newStars >= 3
-          ? card.copyWith(starCount: 0, archived: true, updatedAt: DateTime.now())
+          ? card.copyWith(
+              starCount: 0,
+              archived: true,
+              updatedAt: DateTime.now(),
+            )
           : card.copyWith(starCount: newStars, updatedAt: DateTime.now());
       await repository.updateFlashcard(updated);
       if (_currentDeckId != null) {

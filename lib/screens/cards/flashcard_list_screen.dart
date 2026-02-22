@@ -87,8 +87,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
             }
             final active = state.flashcards.where((c) => !c.archived).toList()
               ..sort((a, b) => a.starCount.compareTo(b.starCount));
-            final archived =
-                state.flashcards.where((c) => c.archived).toList();
+            final archived = state.flashcards.where((c) => c.archived).toList();
             return Column(
               children: [
                 _SwipeHintBanner(
@@ -472,10 +471,7 @@ class _ArchivedCardTile extends StatelessWidget {
                 ),
               ),
               const Divider(height: 16),
-              Text(
-                card.back,
-                style: TextStyle(color: cs.outline),
-              ),
+              Text(card.back, style: TextStyle(color: cs.outline)),
             ],
           ),
         ),

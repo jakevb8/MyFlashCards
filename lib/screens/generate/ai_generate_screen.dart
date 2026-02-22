@@ -437,44 +437,51 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                           ),
                           const Spacer(),
                           GestureDetector(
-                            onTap: _loading ? null : () async {
-                              final ctrl = TextEditingController(
-                                text: '$_cardCount',
-                              );
-                              final result = await showDialog<int>(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text('Cards to generate'),
-                                  content: TextField(
-                                    controller: ctrl,
-                                    keyboardType: TextInputType.number,
-                                    autofocus: true,
-                                    decoration: const InputDecoration(
-                                      hintText: '1 – 100',
-                                      suffixText: 'cards',
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () {
-                                        final n = int.tryParse(ctrl.text.trim());
-                                        if (n != null && n >= 1 && n <= 100) {
-                                          Navigator.pop(context, n);
-                                        }
-                                      },
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (result != null) {
-                                setState(() => _cardCount = result);
-                              }
-                            },
+                            onTap: _loading
+                                ? null
+                                : () async {
+                                    final ctrl = TextEditingController(
+                                      text: '$_cardCount',
+                                    );
+                                    final result = await showDialog<int>(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('Cards to generate'),
+                                        content: TextField(
+                                          controller: ctrl,
+                                          keyboardType: TextInputType.number,
+                                          autofocus: true,
+                                          decoration: const InputDecoration(
+                                            hintText: '1 – 100',
+                                            suffixText: 'cards',
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () {
+                                              final n = int.tryParse(
+                                                ctrl.text.trim(),
+                                              );
+                                              if (n != null &&
+                                                  n >= 1 &&
+                                                  n <= 100) {
+                                                Navigator.pop(context, n);
+                                              }
+                                            },
+                                            child: const Text('OK'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (result != null) {
+                                      setState(() => _cardCount = result);
+                                    }
+                                  },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -809,9 +816,7 @@ class _InlineEditFieldState extends State<_InlineEditField> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: widget.accentColor, width: 3),
-        ),
+        border: Border(left: BorderSide(color: widget.accentColor, width: 3)),
       ),
       padding: const EdgeInsets.only(left: 8),
       child: TextFormField(

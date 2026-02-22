@@ -125,14 +125,10 @@ class _BackupScreenState extends State<BackupScreen> {
       final typeIndex = themeData['themeTypeIndex'] as int;
       final modeIndex = themeData['themeModeIndex'] as int;
       final isKids = themeData['isKidsMode'] as bool;
-      final type = AppThemeType.values[typeIndex.clamp(
-        0,
-        AppThemeType.values.length - 1,
-      )];
-      final mode = ThemeMode.values[modeIndex.clamp(
-        0,
-        ThemeMode.values.length - 1,
-      )];
+      final type = AppThemeType
+          .values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
+      final mode =
+          ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
       context.read<ThemeBloc>()
         ..add(ChangeThemeType(type))
         ..add(SetBrightness(mode));

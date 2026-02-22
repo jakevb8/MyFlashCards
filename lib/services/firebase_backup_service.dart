@@ -63,10 +63,7 @@ class FirebaseBackupService {
 
     // Process upserts in chunks.
     for (var i = 0; i < decks.length; i += chunkSize) {
-      final chunk = decks.sublist(
-        i,
-        (i + chunkSize).clamp(0, decks.length),
-      );
+      final chunk = decks.sublist(i, (i + chunkSize).clamp(0, decks.length));
       final batch = _firestore.batch();
       for (final deck in chunk) {
         batch.set(col.doc(deck.id), deck.toJson());
@@ -111,10 +108,7 @@ class FirebaseBackupService {
 
     // Upserts in chunks (includes starCount & archived via toJson).
     for (var i = 0; i < cards.length; i += chunkSize) {
-      final chunk = cards.sublist(
-        i,
-        (i + chunkSize).clamp(0, cards.length),
-      );
+      final chunk = cards.sublist(i, (i + chunkSize).clamp(0, cards.length));
       final batch = _firestore.batch();
       for (final card in chunk) {
         batch.set(col.doc(card.id), card.toJson());
@@ -161,9 +155,7 @@ class FirebaseBackupService {
         .doc(uid)
         .collection('flashcards')
         .get();
-    return snapshot.docs
-        .map((doc) => Flashcard.fromJson(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) => Flashcard.fromJson(doc.data())).toList();
   }
 
   /// Restore theme settings from Firestore.

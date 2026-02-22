@@ -28,11 +28,13 @@ class StudyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => StudyBloc()
-        ..add(StartStudySession(
-          flashcards: flashcards,
-          randomize: randomize,
-          flipped: flipped,
-        )),
+        ..add(
+          StartStudySession(
+            flashcards: flashcards,
+            randomize: randomize,
+            flipped: flipped,
+          ),
+        ),
       child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
     );
   }
@@ -59,7 +61,9 @@ class _StudyView extends StatelessWidget {
               Icons.flip_camera_android_outlined,
               color: flipped ? Theme.of(context).colorScheme.primary : null,
             ),
-            tooltip: flipped ? 'Showing back→front (tap to restore)' : 'Flip deck (study back→front)',
+            tooltip: flipped
+                ? 'Showing back→front (tap to restore)'
+                : 'Flip deck (study back→front)',
             onPressed: () => context.read<StudyBloc>().add(
               RestartSession(flipped: !flipped),
             ),
@@ -74,9 +78,8 @@ class _StudyView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.replay),
             tooltip: 'Restart',
-            onPressed: () => context.read<StudyBloc>().add(
-              RestartSession(flipped: flipped),
-            ),
+            onPressed: () =>
+                context.read<StudyBloc>().add(RestartSession(flipped: flipped)),
           ),
         ],
       ),
@@ -242,7 +245,8 @@ class _StudyCardViewState extends State<_StudyCardView>
           // limited to one star per card per session via StudyBloc.
           BlocBuilder<StudyBloc, StudyState>(
             builder: (context, studyState) {
-              if (studyState is! StudyInProgress) return const SizedBox.shrink();
+              if (studyState is! StudyInProgress)
+                return const SizedBox.shrink();
               final cardId = studyState.currentCard.id;
               final alreadyStarred = studyState.isStarredThisSession(cardId);
 
@@ -252,8 +256,9 @@ class _StudyCardViewState extends State<_StudyCardView>
                   Flashcard? live;
                   if (cardState is FlashcardLoaded) {
                     try {
-                      live = cardState.flashcards
-                          .firstWhere((c) => c.id == cardId);
+                      live = cardState.flashcards.firstWhere(
+                        (c) => c.id == cardId,
+                      );
                     } catch (_) {}
                   }
                   live ??= studyState.currentCard;
@@ -270,12 +275,12 @@ class _StudyCardViewState extends State<_StudyCardView>
                           onPressed: alreadyStarred
                               ? null
                               : () {
-                                  context
-                                      .read<FlashcardBloc>()
-                                      .add(StarCard(cardId));
-                                  context
-                                      .read<StudyBloc>()
-                                      .add(MarkStarredInSession(cardId));
+                                  context.read<FlashcardBloc>().add(
+                                    StarCard(cardId),
+                                  );
+                                  context.read<StudyBloc>().add(
+                                    MarkStarredInSession(cardId),
+                                  );
                                 },
                           style: FilledButton.styleFrom(
                             backgroundColor: alreadyStarred

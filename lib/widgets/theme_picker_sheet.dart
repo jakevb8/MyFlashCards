@@ -148,8 +148,9 @@ class ThemePickerSheet extends StatelessWidget {
                       icon: t.icon,
                       color: t.color,
                       selected: state.themeType == t.type,
-                      onTap: () =>
-                          context.read<ThemeBloc>().add(ChangeThemeType(t.type)),
+                      onTap: () => context.read<ThemeBloc>().add(
+                        ChangeThemeType(t.type),
+                      ),
                     ),
                 ],
               ),

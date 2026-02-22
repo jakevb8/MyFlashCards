@@ -154,7 +154,9 @@ void main() {
       act: (b) => b
         ..add(ToggleKidsMode()) // → adult/classic
         ..add(const ChangeThemeType(AppThemeType.executive)) // pick adult theme
-        ..add(ToggleKidsMode()), // → kids again: executive is adult, so → sunshine
+        ..add(
+          ToggleKidsMode(),
+        ), // → kids again: executive is adult, so → sunshine
       expect: () => [
         const ThemeState(
           themeType: AppThemeType.classic,

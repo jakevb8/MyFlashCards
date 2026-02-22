@@ -13,6 +13,7 @@ class StudyInProgress extends StudyState {
   final List<Flashcard> cards;
   final int currentIndex;
   final bool showingFront;
+
   /// IDs of cards that have been starred during this session (one per card).
   final Set<String> starredThisSession;
 
@@ -46,7 +47,12 @@ class StudyInProgress extends StudyState {
   }
 
   @override
-  List<Object?> get props => [cards, currentIndex, showingFront, starredThisSession];
+  List<Object?> get props => [
+    cards,
+    currentIndex,
+    showingFront,
+    starredThisSession,
+  ];
 }
 
 class StudyComplete extends StudyState {
