@@ -1,5 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../blocs/flashcard/flashcard_bloc.dart';
+import '../../blocs/flashcard/flashcard_event.dart';
+import '../../blocs/flashcard/flashcard_state.dart';
 import '../../blocs/study/study_bloc.dart';
 import '../../blocs/study/study_event.dart';
 import '../../blocs/study/study_state.dart';
@@ -233,6 +236,64 @@ class _StudyCardViewState extends State<_StudyCardView>
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Star button — reads live star count from FlashcardBloc
+          BlocBuilder<FlashcardBloc, FlashcardState>(
+            builder: (context, cardState) {
+              final cardId = state.currentCard.id;
+              // Find the live version of this card so star count stays fresh.
+              Flashcard? live;
+              if (cardState is FlashcardLoaded) {
+                try {
+                  live = cardState.flashcards.firstWhere((c) => c.id == cardId);
+                } catch (_) {}
+              }
+              live ??= state.currentCard;
+
+              final cs = Theme.of(context).colorScheme;
+              final starCount = live.starCount.clamp(0, 2);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Tooltip(
+                    message: 'I know this card! (${live.starCount}/3 — at 3 it\'s archived)',
+                    child: FilledButton.tonal(
+                      onPressed: () =>
+                          context.read<FlashcardBloc>().add(StarCard(cardId)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: live.starCount > 0
+                            ? cs.primaryContainer
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (int i = 0; i < 2; i++)
+                            Icon(
+                              i < starCount ? Icons.star : Icons.star_border,
+                              size: 20,
+                              color: i < starCount
+                                  ? cs.primary
+                                  : cs.onSurfaceVariant,
+                            ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${live.starCount}/3',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
         ],
       ),
     );

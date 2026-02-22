@@ -34,39 +34,95 @@ class FirebaseBackupService {
   Future<void> backupDecks(List<Deck> decks) async {
     if (!isSignedIn) throw Exception('Not signed in');
     final uid = currentUser!.uid;
-    final batch = _firestore.batch();
-    for (final deck in decks) {
-      final ref = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('decks')
-          .doc(deck.id);
-      batch.set(ref, deck.toJson());
+    final col = _firestore.collection('users').doc(uid).collection('decks');
+
+    // Fetch existing doc IDs so we can delete removed decks.
+    final existing = await col.get();
+    final localIds = decks.map((d) => d.id).toSet();
+    final toDelete = existing.docs
+        .where((doc) => !localIds.contains(doc.id))
+        .map((doc) => doc.reference)
+        .toList();
+
+    // Batch all deletes + upserts (≤400 per batch).
+    final allOps = <Future<void>>[];
+    const chunkSize = 400;
+
+    // Process deletes in chunks.
+    for (var i = 0; i < toDelete.length; i += chunkSize) {
+      final chunk = toDelete.sublist(
+        i,
+        (i + chunkSize).clamp(0, toDelete.length),
+      );
+      final batch = _firestore.batch();
+      for (final ref in chunk) {
+        batch.delete(ref);
+      }
+      allOps.add(batch.commit());
     }
-    await batch.commit();
+
+    // Process upserts in chunks.
+    for (var i = 0; i < decks.length; i += chunkSize) {
+      final chunk = decks.sublist(
+        i,
+        (i + chunkSize).clamp(0, decks.length),
+      );
+      final batch = _firestore.batch();
+      for (final deck in chunk) {
+        batch.set(col.doc(deck.id), deck.toJson());
+      }
+      allOps.add(batch.commit());
+    }
+
+    await Future.wait(allOps);
   }
 
   Future<void> backupFlashcards(List<Flashcard> cards) async {
     if (!isSignedIn) throw Exception('Not signed in');
     final uid = currentUser!.uid;
-    // Firestore batches are limited to 500 writes; chunk if necessary.
+    final col = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('flashcards');
+
+    // Fetch existing doc IDs so we can delete removed cards.
+    final existing = await col.get();
+    final localIds = cards.map((c) => c.id).toSet();
+    final toDelete = existing.docs
+        .where((doc) => !localIds.contains(doc.id))
+        .map((doc) => doc.reference)
+        .toList();
+
     const chunkSize = 400;
+    final allOps = <Future<void>>[];
+
+    // Deletes in chunks.
+    for (var i = 0; i < toDelete.length; i += chunkSize) {
+      final chunk = toDelete.sublist(
+        i,
+        (i + chunkSize).clamp(0, toDelete.length),
+      );
+      final batch = _firestore.batch();
+      for (final ref in chunk) {
+        batch.delete(ref);
+      }
+      allOps.add(batch.commit());
+    }
+
+    // Upserts in chunks (includes starCount & archived via toJson).
     for (var i = 0; i < cards.length; i += chunkSize) {
       final chunk = cards.sublist(
         i,
-        i + chunkSize > cards.length ? cards.length : i + chunkSize,
+        (i + chunkSize).clamp(0, cards.length),
       );
       final batch = _firestore.batch();
       for (final card in chunk) {
-        final ref = _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('flashcards')
-            .doc(card.id);
-        batch.set(ref, card.toJson()); // includes starCount & archived
+        batch.set(col.doc(card.id), card.toJson());
       }
-      await batch.commit();
+      allOps.add(batch.commit());
     }
+
+    await Future.wait(allOps);
   }
 
   /// Back up theme settings (themeType index, themeMode index, isKidsMode).

@@ -38,6 +38,17 @@ Feature: Card Progress Tracking
     When I tap "Unarchive" on that card in the archived section
     Then the card should be returned to the active list with 0 stars
 
+  Scenario: Star button is visible during a study session
+    Given I am studying a deck with at least one card
+    Then I should see a star button below the navigation buttons
+    And it should show the current star count for the visible card
+
+  Scenario: Star a card during a study session
+    Given I am studying a deck and viewing a card with 1 star
+    When I tap the star button during the study session
+    Then the card's star count should increment to 2
+    And the star button should update immediately
+
   Scenario: Star count and archived status are backed up to Firestore
     Given I am signed in
     And I have a card with 2 stars

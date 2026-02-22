@@ -60,8 +60,10 @@ Feature: Cloud Backup
     Then I should no longer be signed in
     And I should see "Sign in with GitHub"
 
-  Scenario: Backup error shows a message
+  Scenario: Back up removes deleted decks and cards from Firestore
     Given I am signed in
-    And Firestore is unavailable
+    And Firestore contains a deck that I have since deleted locally
     When I tap "Back Up Now"
-    Then I should see an error message
+    Then the deleted deck should be removed from Firestore
+    And only currently local decks and cards should remain in Firestore
+
