@@ -6,6 +6,7 @@ import 'study_state.dart';
 
 class StudyBloc extends Bloc<StudyEvent, StudyState> {
   List<Flashcard> _originalCards = [];
+  bool _flipped = false;
 
   StudyBloc() : super(StudyInitial()) {
     on<StartStudySession>(_onStartStudySession);
@@ -15,15 +16,25 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     on<RestartSession>(_onRestartSession);
   }
 
+  /// Swaps front/back on every card when [flipped] is true.
+  List<Flashcard> _applyFlip(List<Flashcard> cards, bool flipped) {
+    if (!flipped) return cards;
+    return cards
+        .map((c) => c.copyWith(front: c.back, back: c.front))
+        .toList();
+  }
+
   void _onStartStudySession(StartStudySession event, Emitter<StudyState> emit) {
     if (event.flashcards.isEmpty) {
       emit(StudyEmpty());
       return;
     }
     _originalCards = List.from(event.flashcards);
-    final cards = event.randomize
+    _flipped = event.flipped;
+    var cards = event.randomize
         ? (List<Flashcard>.from(event.flashcards)..shuffle(Random()))
         : List<Flashcard>.from(event.flashcards);
+    cards = _applyFlip(cards, _flipped);
     emit(StudyInProgress(cards: cards, currentIndex: 0));
   }
 
@@ -66,9 +77,11 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
 
   void _onRestartSession(RestartSession event, Emitter<StudyState> emit) {
     if (_originalCards.isEmpty) return;
-    final cards = event.randomize
+    _flipped = event.flipped;
+    var cards = event.randomize
         ? (List<Flashcard>.from(_originalCards)..shuffle(Random()))
         : List<Flashcard>.from(_originalCards);
+    cards = _applyFlip(cards, _flipped);
     emit(StudyInProgress(cards: cards, currentIndex: 0));
   }
 }

@@ -11,20 +11,26 @@ class StudyScreen extends StatelessWidget {
   final Deck deck;
   final List<Flashcard> flashcards;
   final bool randomize;
+  final bool flipped;
 
   const StudyScreen({
     super.key,
     required this.deck,
     required this.flashcards,
     this.randomize = false,
+    this.flipped = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => StudyBloc()
-        ..add(StartStudySession(flashcards: flashcards, randomize: randomize)),
-      child: _StudyView(deck: deck, flashcards: flashcards),
+        ..add(StartStudySession(
+          flashcards: flashcards,
+          randomize: randomize,
+          flipped: flipped,
+        )),
+      child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
     );
   }
 }
@@ -32,7 +38,12 @@ class StudyScreen extends StatelessWidget {
 class _StudyView extends StatelessWidget {
   final Deck deck;
   final List<Flashcard> flashcards;
-  const _StudyView({required this.deck, required this.flashcards});
+  final bool flipped;
+  const _StudyView({
+    required this.deck,
+    required this.flashcards,
+    required this.flipped,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,17 +52,27 @@ class _StudyView extends StatelessWidget {
         title: Text(deck.name),
         actions: [
           IconButton(
+            icon: Icon(
+              Icons.flip_camera_android_outlined,
+              color: flipped ? Theme.of(context).colorScheme.primary : null,
+            ),
+            tooltip: flipped ? 'Showing back→front (tap to restore)' : 'Flip deck (study back→front)',
+            onPressed: () => context.read<StudyBloc>().add(
+              RestartSession(flipped: !flipped),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.shuffle),
             tooltip: 'Shuffle',
             onPressed: () => context.read<StudyBloc>().add(
-              const RestartSession(randomize: true),
+              RestartSession(randomize: true, flipped: flipped),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.replay),
             tooltip: 'Restart',
             onPressed: () => context.read<StudyBloc>().add(
-              const RestartSession(randomize: false),
+              RestartSession(flipped: flipped),
             ),
           ),
         ],

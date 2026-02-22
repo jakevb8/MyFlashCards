@@ -55,6 +55,16 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                         randomize: true,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.flip_camera_android_outlined),
+                      tooltip: 'Study Flipped (back→front)',
+                      onPressed: () => _startStudy(
+                        context,
+                        state.flashcards,
+                        randomize: false,
+                        flipped: true,
+                      ),
+                    ),
                   ],
                 );
               }
@@ -117,12 +127,17 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
     BuildContext context,
     List<Flashcard> cards, {
     required bool randomize,
+    bool flipped = false,
   }) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            StudyScreen(deck: deck, flashcards: cards, randomize: randomize),
+        builder: (_) => StudyScreen(
+          deck: deck,
+          flashcards: cards,
+          randomize: randomize,
+          flipped: flipped,
+        ),
       ),
     );
   }

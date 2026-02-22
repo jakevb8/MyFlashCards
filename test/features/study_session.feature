@@ -37,3 +37,20 @@ Feature: Study Session
     Given I have finished a study session
     When I tap "Restart"
     Then I should be back on card 1
+
+  Scenario: Study with deck flipped (back shown first)
+    Given I have a deck with cards where front is "cat" and back is "gato"
+    When I start a study session with "Study Flipped" 
+    Then I should see "gato" as the question on the first card
+    And tapping the card should reveal "cat" as the answer
+
+  Scenario: Flip icon in study app bar toggles flip state
+    Given I am studying a deck in normal order
+    When I tap the flip icon in the app bar
+    Then the deck should restart with back shown first
+    And the flip icon should be highlighted to indicate flipped mode
+
+  Scenario: Flipped session can also be shuffled
+    Given I am studying a flipped deck
+    When I tap the shuffle icon
+    Then the cards should be shuffled and still show back→front
