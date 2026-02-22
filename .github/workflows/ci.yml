@@ -30,6 +30,10 @@ jobs:
 
       - name: Run tests
         run: flutter test --coverage
+        env:
+          # GEMINI_API_KEY is only needed for integration/manual tests.
+          # Unit tests mock the service so this can be empty and CI still passes.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
