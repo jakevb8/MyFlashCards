@@ -17,6 +17,8 @@ void main() {
       expect(card.front, 'What is 2+2?');
       expect(card.back, '4');
       expect(card.deckId, 'deck1');
+      expect(card.starCount, 0);
+      expect(card.archived, false);
     });
 
     test('copyWith returns updated flashcard', () {
@@ -33,6 +35,24 @@ void main() {
       expect(updated.front, card.front);
     });
 
+    test('copyWith updates starCount and archived', () {
+      final card = Flashcard(
+        id: '1',
+        deckId: 'deck1',
+        front: 'Q',
+        back: 'A',
+        createdAt: now,
+        updatedAt: now,
+      );
+      final starred = card.copyWith(starCount: 2);
+      expect(starred.starCount, 2);
+      expect(starred.archived, false);
+
+      final archived = starred.copyWith(starCount: 0, archived: true);
+      expect(archived.archived, true);
+      expect(archived.starCount, 0);
+    });
+
     test('serialises to and from JSON', () {
       final card = Flashcard(
         id: '42',
@@ -41,10 +61,30 @@ void main() {
         back: 'Hello',
         createdAt: now,
         updatedAt: now,
+        starCount: 1,
+        archived: false,
       );
       final json = card.toJson();
+      expect(json['starCount'], 1);
+      expect(json['archived'], false);
       final restored = Flashcard.fromJson(json);
       expect(restored, card);
     });
+
+    test('fromJson defaults starCount and archived when missing', () {
+      final json = {
+        'id': '1',
+        'deckId': 'deck1',
+        'front': 'Q',
+        'back': 'A',
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
+        // starCount and archived intentionally omitted (old format)
+      };
+      final card = Flashcard.fromJson(json);
+      expect(card.starCount, 0);
+      expect(card.archived, false);
+    });
   });
 }
+

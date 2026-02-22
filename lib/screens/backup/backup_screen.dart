@@ -7,6 +7,9 @@ import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
 import '../../blocs/flashcard/flashcard_bloc.dart';
 import '../../blocs/flashcard/flashcard_state.dart';
+import '../../blocs/theme/theme_bloc.dart';
+import '../../blocs/theme/theme_event.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../../repositories/hive_deck_repository.dart';
@@ -80,22 +83,33 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _backup() => _run(() async {
     final deckState = context.read<DeckBloc>().state;
     final cardState = context.read<FlashcardBloc>().state;
+    final themeState = context.read<ThemeBloc>().state;
     final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
     final cards = cardState is FlashcardLoaded
         ? cardState.flashcards
         : <Flashcard>[];
     await _service.backupDecks(decks);
     await _service.backupFlashcards(cards);
+    await _service.backupThemeSettings(
+      themeTypeIndex: themeState.themeType.index,
+      themeModeIndex: themeState.themeMode.index,
+      isKidsMode: themeState.isKidsMode,
+    );
     _snack('Backed up ${decks.length} decks and ${cards.length} cards ✓');
   });
 
   Future<void> _restore() => _run(() async {
     final decks = await _service.restoreDecks();
     final cards = await _service.restoreFlashcards();
+    final themeData = await _service.restoreThemeSettings();
 
-    // Write restored data into Hive so it's persisted locally.
+    // Clear local Hive data first so restore is a true replacement.
     final deckRepo = context.read<HiveDeckRepository>();
     final cardRepo = context.read<HiveFlashcardRepository>();
+    await deckRepo.clearAll();
+    await cardRepo.clearAll();
+
+    // Write restored data into Hive.
     for (final deck in decks) {
       await deckRepo.addDeck(deck);
     }
@@ -105,6 +119,27 @@ class _BackupScreenState extends State<BackupScreen> {
 
     // Reload DeckBloc so the deck list screen updates immediately.
     if (mounted) context.read<DeckBloc>().add(LoadDecks());
+
+    // Restore theme settings if present.
+    if (mounted && themeData != null) {
+      final typeIndex = themeData['themeTypeIndex'] as int;
+      final modeIndex = themeData['themeModeIndex'] as int;
+      final isKids = themeData['isKidsMode'] as bool;
+      final type = AppThemeType.values[typeIndex.clamp(
+        0,
+        AppThemeType.values.length - 1,
+      )];
+      final mode = ThemeMode.values[modeIndex.clamp(
+        0,
+        ThemeMode.values.length - 1,
+      )];
+      context.read<ThemeBloc>()
+        ..add(ChangeThemeType(type))
+        ..add(SetBrightness(mode));
+      if (isKids != context.read<ThemeBloc>().state.isKidsMode) {
+        context.read<ThemeBloc>().add(ToggleKidsMode());
+      }
+    }
 
     _snack('Restored ${decks.length} decks and ${cards.length} cards ✓');
   });

@@ -23,3 +23,8 @@ class SetBrightness extends ThemeEvent {
   @override
   List<Object?> get props => [themeMode];
 }
+
+/// Switch between adult and kids theme palettes.
+/// Automatically selects [AppThemeType.classic] ↔ [AppThemeType.sunshine]
+/// if the current theme doesn't belong to the new palette.
+class ToggleKidsMode extends ThemeEvent {}

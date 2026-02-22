@@ -43,3 +43,20 @@ class DeleteFlashcard extends FlashcardEvent {
   @override
   List<Object?> get props => [id];
 }
+
+/// Increment star count on a card.
+/// At 3 stars the card is automatically archived and stars reset to 0.
+class StarCard extends FlashcardEvent {
+  final String id;
+  const StarCard(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
+/// Move an archived card back to the active list and reset its star count.
+class UnarchiveCard extends FlashcardEvent {
+  final String id;
+  const UnarchiveCard(this.id);
+  @override
+  List<Object?> get props => [id];
+}

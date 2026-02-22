@@ -15,6 +15,8 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
     on<AddFlashcards>(_onAddFlashcards);
     on<UpdateFlashcard>(_onUpdateFlashcard);
     on<DeleteFlashcard>(_onDeleteFlashcard);
+    on<StarCard>(_onStarCard);
+    on<UnarchiveCard>(_onUnarchiveCard);
   }
 
   Future<void> _onLoadFlashcards(
@@ -99,6 +101,49 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
   ) async {
     try {
       await repository.deleteFlashcard(event.id);
+      if (_currentDeckId != null) {
+        final cards = await repository.getFlashcards(_currentDeckId!);
+        emit(FlashcardLoaded(cards));
+      }
+    } catch (e) {
+      emit(FlashcardError(e.toString()));
+    }
+  }
+
+  /// Increment star count. At 3 stars → archive the card and reset stars.
+  Future<void> _onStarCard(
+    StarCard event,
+    Emitter<FlashcardState> emit,
+  ) async {
+    try {
+      final card = await repository.getFlashcard(event.id);
+      final newStars = card.starCount + 1;
+      final updated = newStars >= 3
+          ? card.copyWith(starCount: 0, archived: true, updatedAt: DateTime.now())
+          : card.copyWith(starCount: newStars, updatedAt: DateTime.now());
+      await repository.updateFlashcard(updated);
+      if (_currentDeckId != null) {
+        final cards = await repository.getFlashcards(_currentDeckId!);
+        emit(FlashcardLoaded(cards));
+      }
+    } catch (e) {
+      emit(FlashcardError(e.toString()));
+    }
+  }
+
+  /// Unarchive a card and reset its star count to 0.
+  Future<void> _onUnarchiveCard(
+    UnarchiveCard event,
+    Emitter<FlashcardState> emit,
+  ) async {
+    try {
+      final card = await repository.getFlashcard(event.id);
+      final updated = card.copyWith(
+        starCount: 0,
+        archived: false,
+        updatedAt: DateTime.now(),
+      );
+      await repository.updateFlashcard(updated);
       if (_currentDeckId != null) {
         final cards = await repository.getFlashcards(_currentDeckId!);
         emit(FlashcardLoaded(cards));

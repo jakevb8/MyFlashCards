@@ -43,4 +43,9 @@ class HiveFlashcardRepository implements FlashcardRepository {
   Future<void> deleteFlashcard(String id) async {
     await _box.delete(id);
   }
+
+  /// Delete all flashcards from local storage (used before a full restore).
+  Future<void> clearAll() async {
+    await _box.clear();
+  }
 }

@@ -85,20 +85,35 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
             if (state.flashcards.isEmpty) {
               return _EmptyState(deck: deck);
             }
+            final active = state.flashcards.where((c) => !c.archived).toList()
+              ..sort((a, b) => a.starCount.compareTo(b.starCount));
+            final archived =
+                state.flashcards.where((c) => c.archived).toList();
             return Column(
               children: [
                 _SwipeHintBanner(
                   message: 'Swipe left on a card to edit or delete',
                 ),
                 Expanded(
-                  child: ListView.separated(
+                  child: ListView(
                     padding: const EdgeInsets.all(16),
-                    itemCount: state.flashcards.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final card = state.flashcards[index];
-                      return _CardTile(card: card, deck: deck);
-                    },
+                    children: [
+                      for (final card in active)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _CardTile(card: card, deck: deck),
+                        ),
+                      if (archived.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _ArchivedHeader(count: archived.length),
+                        const SizedBox(height: 8),
+                        for (final card in archived)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _ArchivedCardTile(card: card),
+                          ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -129,12 +144,14 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
     required bool randomize,
     bool flipped = false,
   }) {
+    // Exclude archived cards from study sessions.
+    final studyCards = cards.where((c) => !c.archived).toList();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => StudyScreen(
           deck: deck,
-          flashcards: cards,
+          flashcards: studyCards,
           randomize: randomize,
           flipped: flipped,
         ),
@@ -210,6 +227,9 @@ class _CardTile extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
+                  const Spacer(),
+                  // ── Star progress ─────────────────────────────────────
+                  _StarButton(card: card),
                 ],
               ),
               const SizedBox(height: 4),
@@ -301,6 +321,109 @@ class _SwipeHintBanner extends StatelessWidget {
             ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Star button: tap to add a star; 3 stars → card is archived ──────────────
+class _StarButton extends StatelessWidget {
+  final Flashcard card;
+  const _StarButton({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    const maxStars = 3;
+    final stars = card.starCount.clamp(0, maxStars - 1);
+    return GestureDetector(
+      onTap: () => context.read<FlashcardBloc>().add(StarCard(card.id)),
+      child: Tooltip(
+        message:
+            'I know this! (${card.starCount}/3 — at 3 it\'s archived)',
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (int i = 0; i < maxStars - 1; i++)
+              Icon(
+                i < stars ? Icons.star : Icons.star_border,
+                size: 18,
+                color: i < stars ? cs.primary : cs.outlineVariant,
+              ),
+            const SizedBox(width: 2),
+            Text(
+              '${card.starCount}/3',
+              style: TextStyle(fontSize: 10, color: cs.outline),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Header divider for the archived section ──────────────────────────────────
+class _ArchivedHeader extends StatelessWidget {
+  final int count;
+  const _ArchivedHeader({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(Icons.archive_outlined, size: 16, color: cs.outline),
+        const SizedBox(width: 6),
+        Text(
+          'Archived — Mastered ($count)',
+          style: TextStyle(
+            color: cs.outline,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Divider(color: cs.outlineVariant)),
+      ],
+    );
+  }
+}
+
+// ── Archived card row — shows front only + Unarchive action ─────────────────
+class _ArchivedCardTile extends StatelessWidget {
+  final Flashcard card;
+  const _ArchivedCardTile({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      color: cs.surfaceContainerHighest,
+      child: ListTile(
+        leading: Icon(Icons.archive_outlined, color: cs.outline),
+        title: Text(
+          card.front,
+          style: TextStyle(color: cs.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          card.back,
+          style: TextStyle(color: cs.outline, fontSize: 12),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: TextButton.icon(
+          onPressed: () =>
+              context.read<FlashcardBloc>().add(UnarchiveCard(card.id)),
+          icon: const Icon(Icons.unarchive_outlined, size: 16),
+          label: const Text('Unarchive'),
+          style: TextButton.styleFrom(
+            foregroundColor: cs.primary,
+            textStyle: const TextStyle(fontSize: 12),
+          ),
+        ),
       ),
     );
   }

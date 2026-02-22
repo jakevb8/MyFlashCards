@@ -108,5 +108,70 @@ void main() {
         ),
       ],
     );
+
+    blocTest<ThemeBloc, ThemeState>(
+      'ToggleKidsMode switches isKidsMode and defaults to sunshine theme',
+      build: ThemeBloc.new,
+      act: (b) => b.add(ToggleKidsMode()),
+      expect: () => [
+        const ThemeState(
+          themeType: AppThemeType.sunshine,
+          themeMode: ThemeMode.system,
+          isKidsMode: true,
+        ),
+      ],
+    );
+
+    blocTest<ThemeBloc, ThemeState>(
+      'ToggleKidsMode back to adult resets to classic theme',
+      build: () => ThemeBloc(
+        initialState: const ThemeState(
+          themeType: AppThemeType.sunshine,
+          themeMode: ThemeMode.system,
+          isKidsMode: true,
+        ),
+      ),
+      act: (b) => b.add(ToggleKidsMode()),
+      expect: () => [
+        const ThemeState(
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.system,
+          isKidsMode: false,
+        ),
+      ],
+    );
+
+    blocTest<ThemeBloc, ThemeState>(
+      'ToggleKidsMode preserves theme if it already belongs to new palette',
+      build: () => ThemeBloc(
+        initialState: const ThemeState(
+          themeType: AppThemeType.sunshine,
+          themeMode: ThemeMode.system,
+          isKidsMode: true,
+        ),
+      ),
+      // Already in sunshine (kids); toggling to adult should revert to classic.
+      act: (b) => b
+        ..add(ToggleKidsMode()) // → adult/classic
+        ..add(const ChangeThemeType(AppThemeType.executive)) // pick adult theme
+        ..add(ToggleKidsMode()), // → kids again: executive is adult, so → sunshine
+      expect: () => [
+        const ThemeState(
+          themeType: AppThemeType.classic,
+          themeMode: ThemeMode.system,
+          isKidsMode: false,
+        ),
+        const ThemeState(
+          themeType: AppThemeType.executive,
+          themeMode: ThemeMode.system,
+          isKidsMode: false,
+        ),
+        const ThemeState(
+          themeType: AppThemeType.sunshine,
+          themeMode: ThemeMode.system,
+          isKidsMode: true,
+        ),
+      ],
+    );
   });
 }

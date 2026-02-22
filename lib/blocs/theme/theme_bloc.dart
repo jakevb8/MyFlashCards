@@ -7,6 +7,7 @@ import 'theme_state.dart';
 
 const _kThemeTypeKey = 'theme_type';
 const _kThemeModeKey = 'theme_mode';
+const _kKidsModeKey = 'kids_mode';
 
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
   ThemeBloc({ThemeState? initialState})
@@ -14,6 +15,7 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     on<ChangeThemeType>(_onChangeThemeType);
     on<ToggleBrightness>(_onToggleBrightness);
     on<SetBrightness>(_onSetBrightness);
+    on<ToggleKidsMode>(_onToggleKidsMode);
   }
 
   /// Load persisted theme from SharedPreferences (call before runApp).
@@ -21,17 +23,23 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     final prefs = await SharedPreferences.getInstance();
     final typeIndex = prefs.getInt(_kThemeTypeKey) ?? 0;
     final modeIndex = prefs.getInt(_kThemeModeKey) ?? 0;
+    final isKids = prefs.getBool(_kKidsModeKey) ?? false;
     final themeType =
         AppThemeType.values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
     final themeMode =
         ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
-    return ThemeState(themeType: themeType, themeMode: themeMode);
+    return ThemeState(
+      themeType: themeType,
+      themeMode: themeMode,
+      isKidsMode: isKids,
+    );
   }
 
   Future<void> _save(ThemeState s) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kThemeTypeKey, s.themeType.index);
     await prefs.setInt(_kThemeModeKey, s.themeMode.index);
+    await prefs.setBool(_kKidsModeKey, s.isKidsMode);
   }
 
   void _onChangeThemeType(ChangeThemeType event, Emitter<ThemeState> emit) {
@@ -53,6 +61,22 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   void _onSetBrightness(SetBrightness event, Emitter<ThemeState> emit) {
     final next = state.copyWith(themeMode: event.themeMode);
+    emit(next);
+    _save(next);
+  }
+
+  void _onToggleKidsMode(ToggleKidsMode event, Emitter<ThemeState> emit) {
+    final nowKids = !state.isKidsMode;
+    // If current theme doesn't match the new palette, switch to the default
+    // for that palette.
+    final currentIsKids = state.themeType.isKids;
+    AppThemeType newType = state.themeType;
+    if (nowKids && !currentIsKids) {
+      newType = AppThemeType.sunshine; // default kids theme
+    } else if (!nowKids && currentIsKids) {
+      newType = AppThemeType.classic; // default adult theme
+    }
+    final next = state.copyWith(isKidsMode: nowKids, themeType: newType);
     emit(next);
     _save(next);
   }

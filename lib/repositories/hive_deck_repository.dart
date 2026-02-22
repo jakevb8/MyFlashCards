@@ -42,4 +42,9 @@ class HiveDeckRepository implements DeckRepository {
   Future<void> deleteDeck(String id) async {
     await _box.delete(id);
   }
+
+  /// Delete all decks from local storage (used before a full restore).
+  Future<void> clearAll() async {
+    await _box.clear();
+  }
 }

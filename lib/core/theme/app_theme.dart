@@ -3,6 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Available themes for MyFlashCards.
 enum AppThemeType {
+  // ── Adult themes ───────────────────────────────────────────────────────────
+  /// Deep indigo and violet — the original default.
+  classic,
+
   /// Bold ocean blues and cyan — energetic, sporty feel.
   oceanBlue,
 
@@ -12,37 +16,75 @@ enum AppThemeType {
   /// Slate and teal — clean, distraction-free, corporate feel.
   executive,
 
-  /// Deep indigo and violet — the original default.
-  classic,
+  // ── Kids themes ────────────────────────────────────────────────────────────
+  /// Bright sunshine yellow and hot coral — sunny, cheerful.
+  sunshine,
+
+  /// Lime green and sky blue — outdoorsy, fresh, adventure vibes.
+  jungle,
+
+  /// Vivid magenta and bright purple — bubbly, candy-shop feel.
+  bubblegum,
+
+  /// Orange and electric blue — bold superhero energy.
+  superHero,
+}
+
+/// Whether a given theme belongs to the kids palette.
+extension AppThemeTypeX on AppThemeType {
+  bool get isKids => index >= AppThemeType.sunshine.index;
+  bool get isAdult => !isKids;
 }
 
 class AppTheme {
   // ── Seed colours per theme ─────────────────────────────────────────────────
 
   static const _seeds = {
-    AppThemeType.oceanBlue: (
-      primary: Color(0xFF0369A1),
-      secondary: Color(0xFF0891B2),
-    ), // Sky-700 / Cyan-600
-    AppThemeType.roseGarden: (
-      primary: Color(0xFFBE185D),
-      secondary: Color(0xFF9333EA),
-    ), // Rose-700 / Purple-600
-    AppThemeType.executive: (
-      primary: Color(0xFF0F766E),
-      secondary: Color(0xFF334155),
-    ), // Teal-700 / Slate-700
     AppThemeType.classic: (
       primary: Color(0xFF4F46E5),
       secondary: Color(0xFF7C3AED),
-    ), // Indigo-600 / Violet-600
+    ),
+    AppThemeType.oceanBlue: (
+      primary: Color(0xFF0369A1),
+      secondary: Color(0xFF0891B2),
+    ),
+    AppThemeType.roseGarden: (
+      primary: Color(0xFFBE185D),
+      secondary: Color(0xFF9333EA),
+    ),
+    AppThemeType.executive: (
+      primary: Color(0xFF0F766E),
+      secondary: Color(0xFF334155),
+    ),
+    // Kids ──────────────────────────────────────────────────────────────────
+    AppThemeType.sunshine: (
+      primary: Color(0xFFD97706), // Amber-600
+      secondary: Color(0xFFEF4444), // Red-500 (coral)
+    ),
+    AppThemeType.jungle: (
+      primary: Color(0xFF16A34A), // Green-600
+      secondary: Color(0xFF0284C7), // Sky-600
+    ),
+    AppThemeType.bubblegum: (
+      primary: Color(0xFFDB2777), // Pink-600
+      secondary: Color(0xFF9333EA), // Purple-600
+    ),
+    AppThemeType.superHero: (
+      primary: Color(0xFFEA580C), // Orange-600
+      secondary: Color(0xFF2563EB), // Blue-600
+    ),
   };
 
   static const _fonts = {
+    AppThemeType.classic: 'Inter',
     AppThemeType.oceanBlue: 'Nunito',
     AppThemeType.roseGarden: 'Lato',
     AppThemeType.executive: 'IBM Plex Sans',
-    AppThemeType.classic: 'Inter',
+    // Kids use rounded, playful fonts
+    AppThemeType.sunshine: 'Nunito',
+    AppThemeType.jungle: 'Nunito',
+    AppThemeType.bubblegum: 'Nunito',
+    AppThemeType.superHero: 'Nunito',
   };
 
   // ── Public builders ────────────────────────────────────────────────────────
@@ -74,6 +116,9 @@ class AppTheme {
       _ => GoogleFonts.interTextTheme(baseText),
     };
 
+    // Kids themes get extra-rounded corners to feel friendly.
+    final radius = type.isKids ? 20.0 : 16.0;
+
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
@@ -86,19 +131,27 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius - 4),
+        ),
         filled: true,
       ),
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius - 4),
+        ),
       ),
     );
   }

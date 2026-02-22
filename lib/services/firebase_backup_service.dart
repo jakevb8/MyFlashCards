@@ -21,17 +21,9 @@ class FirebaseBackupService {
       _auth.createUserWithEmailAndPassword(email: email, password: password);
 
   /// Sign in with GitHub using Firebase's built-in OAuth flow.
-  ///
-  /// Firebase opens a browser, handles the OAuth exchange with GitHub,
-  /// then redirects back to the app via the custom URL scheme configured
-  /// in Firebase Console (e.g. `com.myflashcards.app://`).
-  /// No client secret is ever stored in the app.
   Future<UserCredential> signInWithGitHub() async {
     final provider = GithubAuthProvider();
-    // Request the user:email scope so we can display their email
     provider.addScope('user:email');
-    // signInWithProvider opens a secure in-app browser (SFSafariViewController
-    // on iOS, Chrome Custom Tab on Android) and handles the full OAuth flow.
     return _auth.signInWithProvider(provider);
   }
 
@@ -43,7 +35,6 @@ class FirebaseBackupService {
     if (!isSignedIn) throw Exception('Not signed in');
     final uid = currentUser!.uid;
     final batch = _firestore.batch();
-
     for (final deck in decks) {
       final ref = _firestore
           .collection('users')
@@ -58,17 +49,39 @@ class FirebaseBackupService {
   Future<void> backupFlashcards(List<Flashcard> cards) async {
     if (!isSignedIn) throw Exception('Not signed in');
     final uid = currentUser!.uid;
-    final batch = _firestore.batch();
-
-    for (final card in cards) {
-      final ref = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('flashcards')
-          .doc(card.id);
-      batch.set(ref, card.toJson());
+    // Firestore batches are limited to 500 writes; chunk if necessary.
+    const chunkSize = 400;
+    for (var i = 0; i < cards.length; i += chunkSize) {
+      final chunk = cards.sublist(
+        i,
+        i + chunkSize > cards.length ? cards.length : i + chunkSize,
+      );
+      final batch = _firestore.batch();
+      for (final card in chunk) {
+        final ref = _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('flashcards')
+            .doc(card.id);
+        batch.set(ref, card.toJson()); // includes starCount & archived
+      }
+      await batch.commit();
     }
-    await batch.commit();
+  }
+
+  /// Back up theme settings (themeType index, themeMode index, isKidsMode).
+  Future<void> backupThemeSettings({
+    required int themeTypeIndex,
+    required int themeModeIndex,
+    required bool isKidsMode,
+  }) async {
+    if (!isSignedIn) throw Exception('Not signed in');
+    final uid = currentUser!.uid;
+    await _firestore.collection('users').doc(uid).set({
+      'themeTypeIndex': themeTypeIndex,
+      'themeModeIndex': themeModeIndex,
+      'isKidsMode': isKidsMode,
+    }, SetOptions(merge: true));
   }
 
   // ── Restore ─────────────────────────────────────────────────────────────────
@@ -92,6 +105,25 @@ class FirebaseBackupService {
         .doc(uid)
         .collection('flashcards')
         .get();
-    return snapshot.docs.map((doc) => Flashcard.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => Flashcard.fromJson(doc.data()))
+        .toList();
+  }
+
+  /// Restore theme settings from Firestore.
+  /// Returns a map with keys: themeTypeIndex, themeModeIndex, isKidsMode.
+  /// Returns null if no theme settings have been backed up yet.
+  Future<Map<String, dynamic>?> restoreThemeSettings() async {
+    if (!isSignedIn) throw Exception('Not signed in');
+    final uid = currentUser!.uid;
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    final data = doc.data()!;
+    if (!data.containsKey('themeTypeIndex')) return null;
+    return {
+      'themeTypeIndex': data['themeTypeIndex'] as int? ?? 0,
+      'themeModeIndex': data['themeModeIndex'] as int? ?? 0,
+      'isKidsMode': data['isKidsMode'] as bool? ?? false,
+    };
   }
 }
