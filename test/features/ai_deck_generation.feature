@@ -30,11 +30,24 @@ Feature: AI Deck Generation
     When I tap "Regenerate"
     Then a new set of cards should be generated for the same topic
 
-  Scenario: Adjust card count before generating
+  Scenario: Adjust card count via slider up to 200
     Given I am on the AI generation screen
-    When I move the "Cards to generate" slider to 20
-    And I tap "Generate Cards"
-    Then exactly 20 cards should be requested from the AI
+    When I move the "Cards to generate" slider to 50
+    Then the card count badge should show 50
+
+  Scenario: Enter a custom card count by tapping the count badge
+    Given I am on the AI generation screen
+    When I tap the card count badge
+    And I type "75" in the dialog
+    And I tap "OK"
+    Then the card count should be set to 75
+
+  Scenario: Custom card count is clamped between 1 and 200
+    Given I am on the AI generation screen
+    When I tap the count badge and enter 250
+    Then the dialog should not accept the value and the count should remain unchanged
+
+
 
   Scenario: Load more cards without duplicates
     Given I have previewed 15 generated cards for "Animals"

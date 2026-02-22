@@ -148,7 +148,9 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
             (s) => _normalise(s.front) == _normalise(c.front),
           );
           if (!alreadyShown) {
-            _suggestions.add(_EditableCard(front: _fmt(c.front), back: _fmt(c.back)));
+            _suggestions.add(
+              _EditableCard(front: _fmt(c.front), back: _fmt(c.back)),
+            );
             added++;
           }
         }
@@ -434,21 +436,82 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const Spacer(),
-                          Text(
-                            '$_cardCount',
-                            style: TextStyle(
-                              color: cs.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                          GestureDetector(
+                            onTap: _loading ? null : () async {
+                              final ctrl = TextEditingController(
+                                text: '$_cardCount',
+                              );
+                              final result = await showDialog<int>(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Cards to generate'),
+                                  content: TextField(
+                                    controller: ctrl,
+                                    keyboardType: TextInputType.number,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      hintText: '1 – 200',
+                                      suffixText: 'cards',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        final n = int.tryParse(ctrl.text.trim());
+                                        if (n != null && n >= 1 && n <= 200) {
+                                          Navigator.pop(context, n);
+                                        }
+                                      },
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (result != null) {
+                                setState(() => _cardCount = result);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$_cardCount',
+                                    style: TextStyle(
+                                      color: cs.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 13,
+                                    color: cs.onPrimaryContainer,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                       Slider(
-                        value: _cardCount.toDouble(),
-                        min: 5,
-                        max: 30,
-                        divisions: 25,
+                        value: _cardCount.toDouble().clamp(1, 200),
+                        min: 1,
+                        max: 200,
+                        divisions: 199,
                         label: '$_cardCount',
                         onChanged: _loading
                             ? null
@@ -688,16 +751,14 @@ class _PreviewCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _InlineEditField(
-                    label: 'Front',
                     value: card.front,
-                    color: cs.primary,
+                    accentColor: cs.primary,
                     onChanged: onEditFront,
                   ),
                   const SizedBox(height: 6),
                   _InlineEditField(
-                    label: 'Back',
                     value: card.back,
-                    color: cs.secondary,
+                    accentColor: cs.secondary,
                     onChanged: onEditBack,
                   ),
                 ],
@@ -716,14 +777,12 @@ class _PreviewCard extends StatelessWidget {
 }
 
 class _InlineEditField extends StatefulWidget {
-  final String label;
   final String value;
-  final Color color;
+  final Color accentColor;
   final ValueChanged<String> onChanged;
   const _InlineEditField({
-    required this.label,
     required this.value,
-    required this.color,
+    required this.accentColor,
     required this.onChanged,
   });
 
@@ -748,22 +807,25 @@ class _InlineEditFieldState extends State<_InlineEditField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: _ctrl,
-      onChanged: widget.onChanged,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        labelText: widget.label,
-        labelStyle: TextStyle(
-          fontSize: 11,
-          color: widget.color,
-          fontWeight: FontWeight.w600,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: widget.accentColor, width: 3),
         ),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       ),
-      minLines: 1,
-      maxLines: 3,
+      padding: const EdgeInsets.only(left: 8),
+      child: TextFormField(
+        controller: _ctrl,
+        onChanged: widget.onChanged,
+        style: const TextStyle(fontSize: 13),
+        decoration: const InputDecoration(
+          isDense: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+        ),
+        minLines: 1,
+        maxLines: 3,
+      ),
     );
   }
 }
