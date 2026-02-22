@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background gradient: deep navy to rich indigo -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f3c"/>
+      <stop offset="100%" style="stop-color:#2d3561"/>
+    </linearGradient>
+
+    <!-- Card shine gradient (warm white highlight) -->
+    <linearGradient id="cardShine" x1="0%" y1="0%" x2="60%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.03"/>
+    </linearGradient>
+
+    <!-- Card 1 (back-left): muted slate -->
+    <linearGradient id="card1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3d4a7a"/>
+      <stop offset="100%" style="stop-color:#2e3866"/>
+    </linearGradient>
+
+    <!-- Card 2 (mid-left): mid purple -->
+    <linearGradient id="card2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a4ea0"/>
+      <stop offset="100%" style="stop-color:#4339880"/>
+    </linearGradient>
+
+    <!-- Card 3 (front-centre): bright violet-to-amber — the hero card -->
+    <linearGradient id="card3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c5cbf"/>
+      <stop offset="60%" style="stop-color:#9b59d0"/>
+      <stop offset="100%" style="stop-color:#c97b3a"/>
+    </linearGradient>
+
+    <!-- Gold accent line on hero card -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f5c842"/>
+      <stop offset="100%" style="stop-color:#e8973a"/>
+    </linearGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-15%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="heroShadow" x="-20%" y="-15%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="28" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- ── Background circle ── -->
+  <rect width="1024" height="1024" rx="200" fill="url(#bg)"/>
+
+  <!-- Subtle radial glow behind cards -->
+  <circle cx="512" cy="540" r="340" fill="#7c5cbf" opacity="0.12"/>
+
+  <!-- ════════════════════════════════════════
+       CARD 1 — far-left, rotated -22°
+       Card proportions: ~260×360 px
+  ════════════════════════════════════════ -->
+  <g transform="translate(512,530) rotate(-22) translate(-130,-180)" filter="url(#shadow)">
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#card1)"/>
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#cardShine)"/>
+    <!-- subtle lines on back card to imply text -->
+    <rect x="30" y="130" width="120" height="10" rx="5" fill="#ffffff" opacity="0.12"/>
+    <rect x="30" y="150" width="90" height="10" rx="5" fill="#ffffff" opacity="0.09"/>
+    <rect x="30" y="170" width="140" height="10" rx="5" fill="#ffffff" opacity="0.07"/>
+  </g>
+
+  <!-- ════════════════════════════════════════
+       CARD 2 — left-centre, rotated -10°
+  ════════════════════════════════════════ -->
+  <g transform="translate(512,530) rotate(-10) translate(-130,-180)" filter="url(#shadow)">
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#card2)"/>
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#cardShine)"/>
+    <rect x="30" y="130" width="130" height="10" rx="5" fill="#ffffff" opacity="0.15"/>
+    <rect x="30" y="150" width="100" height="10" rx="5" fill="#ffffff" opacity="0.11"/>
+    <rect x="30" y="170" width="150" height="10" rx="5" fill="#ffffff" opacity="0.08"/>
+  </g>
+
+  <!-- ════════════════════════════════════════
+       CARD 4 — right-centre, rotated +10°
+  ════════════════════════════════════════ -->
+  <g transform="translate(512,530) rotate(10) translate(-130,-180)" filter="url(#shadow)">
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#card1)"/>
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#cardShine)"/>
+    <rect x="30" y="130" width="110" height="10" rx="5" fill="#ffffff" opacity="0.12"/>
+    <rect x="30" y="150" width="140" height="10" rx="5" fill="#ffffff" opacity="0.09"/>
+    <rect x="30" y="170" width="80" height="10" rx="5" fill="#ffffff" opacity="0.07"/>
+  </g>
+
+  <!-- ════════════════════════════════════════
+       CARD 5 — far-right, rotated +22°
+  ════════════════════════════════════════ -->
+  <g transform="translate(512,530) rotate(22) translate(-130,-180)" filter="url(#shadow)">
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#card2)"/>
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#cardShine)"/>
+    <rect x="30" y="130" width="150" height="10" rx="5" fill="#ffffff" opacity="0.12"/>
+    <rect x="30" y="150" width="90" height="10" rx="5" fill="#ffffff" opacity="0.09"/>
+  </g>
+
+  <!-- ════════════════════════════════════════
+       CARD 3 — HERO CARD, centre, upright
+  ════════════════════════════════════════ -->
+  <g transform="translate(382,310)" filter="url(#heroShadow)">
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#card3)"/>
+    <rect x="0" y="0" width="260" height="360" rx="22" fill="url(#cardShine)"/>
+
+    <!-- Gold accent stripe at top of hero card -->
+    <rect x="0" y="0" width="260" height="6" rx="3" fill="url(#gold)" opacity="0.9"/>
+
+    <!-- "LEARN" text — large, blurred/faded so it reads as an impression -->
+    <!-- Outer blur layer — gives the washed-out, ghosted feel -->
+    <text x="130" y="205" text-anchor="middle"
+          font-family="'Helvetica Neue', Arial, sans-serif"
+          font-size="62" font-weight="800" letter-spacing="14"
+          fill="#ffffff" opacity="0.08">LEARN</text>
+
+    <!-- Middle layer — slightly more visible -->
+    <text x="130" y="205" text-anchor="middle"
+          font-family="'Helvetica Neue', Arial, sans-serif"
+          font-size="60" font-weight="800" letter-spacing="14"
+          fill="#ffffff" opacity="0.22">LEARN</text>
+
+    <!-- Crisp foreground layer — readable but not screaming -->
+    <text x="130" y="205" text-anchor="middle"
+          font-family="'Helvetica Neue', Arial, sans-serif"
+          font-size="58" font-weight="800" letter-spacing="14"
+          fill="#ffffff" opacity="0.55">LEARN</text>
+
+    <!-- Decorative lines above/below the word (like card ruling lines) -->
+    <line x1="30" y1="148" x2="230" y2="148" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+    <line x1="30" y1="222" x2="230" y2="222" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+
+    <!-- Small gold star/sparkle top-right corner -->
+    <text x="220" y="48" text-anchor="middle"
+          font-family="Arial" font-size="28" fill="url(#gold)" opacity="0.85">★</text>
+  </g>
+
+  <!-- ════════════════════════════════════════
+       Subtle sparkles scattered around
+  ════════════════════════════════════════ -->
+  <circle cx="200" cy="240" r="4" fill="#f5c842" opacity="0.5"/>
+  <circle cx="820" cy="300" r="3" fill="#f5c842" opacity="0.4"/>
+  <circle cx="170" cy="720" r="2.5" fill="#c97b3a" opacity="0.45"/>
+  <circle cx="850" cy="680" r="3.5" fill="#f5c842" opacity="0.35"/>
+  <circle cx="740" cy="200" r="2" fill="#ffffff" opacity="0.5"/>
+  <circle cx="280" cy="800" r="2" fill="#ffffff" opacity="0.4"/>
+</svg>

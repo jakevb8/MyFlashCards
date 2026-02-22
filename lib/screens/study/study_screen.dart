@@ -183,7 +183,6 @@ class _StudyCardViewState extends State<_StudyCardView>
                     child: isFront
                         ? _CardFace(
                             text: state.currentCard.front,
-                            label: 'FRONT',
                             color: colorScheme.primaryContainer,
                             textColor: colorScheme.onPrimaryContainer,
                           )
@@ -192,7 +191,6 @@ class _StudyCardViewState extends State<_StudyCardView>
                             alignment: Alignment.center,
                             child: _CardFace(
                               text: state.currentCard.back,
-                              label: 'BACK',
                               color: colorScheme.secondaryContainer,
                               textColor: colorScheme.onSecondaryContainer,
                             ),
@@ -243,13 +241,11 @@ class _StudyCardViewState extends State<_StudyCardView>
 
 class _CardFace extends StatelessWidget {
   final String text;
-  final String label;
   final Color color;
   final Color textColor;
 
   const _CardFace({
     required this.text,
-    required this.label,
     required this.color,
     required this.textColor,
   });
@@ -273,16 +269,16 @@ class _CardFace extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-              letterSpacing: 2,
+          // Small dot — subtle side indicator without any text label
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: textColor.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
             text,
             style: TextStyle(
