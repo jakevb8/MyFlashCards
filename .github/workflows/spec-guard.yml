@@ -1,7 +1,7 @@
 name: Spec Guard
 
 on:
-  pull_request:
+  push:
     branches: [main]
 
 jobs:
@@ -12,19 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Fetch enough history to diff against the PR base
-          fetch-depth: 0
+          # Fetch enough history to diff against the previous commit
+          fetch-depth: 2
 
       - name: Check that .feature files were updated alongside lib/ changes
         id: spec_check
         shell: bash
         run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
+          # Diff only the files changed in this single commit push
+          BASE=HEAD~1
+          HEAD=HEAD
 
           echo "Diffing $BASE..$HEAD"
 
-          # Files changed in this PR
+          # Files changed in this push
           CHANGED=$(git diff --name-only "$BASE" "$HEAD")
 
           echo "Changed files:"
