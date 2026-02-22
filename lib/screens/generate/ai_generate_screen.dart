@@ -450,7 +450,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                                     keyboardType: TextInputType.number,
                                     autofocus: true,
                                     decoration: const InputDecoration(
-                                      hintText: '1 – 200',
+                                      hintText: '1 – 100',
                                       suffixText: 'cards',
                                     ),
                                   ),
@@ -462,7 +462,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                                     FilledButton(
                                       onPressed: () {
                                         final n = int.tryParse(ctrl.text.trim());
-                                        if (n != null && n >= 1 && n <= 200) {
+                                        if (n != null && n >= 1 && n <= 100) {
                                           Navigator.pop(context, n);
                                         }
                                       },
@@ -508,10 +508,10 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                         ],
                       ),
                       Slider(
-                        value: _cardCount.toDouble().clamp(1, 200),
+                        value: _cardCount.toDouble().clamp(1, 100),
                         min: 1,
-                        max: 200,
-                        divisions: 199,
+                        max: 100,
+                        divisions: 99,
                         label: '$_cardCount',
                         onChanged: _loading
                             ? null
@@ -821,6 +821,10 @@ class _InlineEditFieldState extends State<_InlineEditField> {
         decoration: const InputDecoration(
           isDense: true,
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          errorBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
         ),
         minLines: 1,

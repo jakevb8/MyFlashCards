@@ -39,7 +39,7 @@ class GeminiDirectService implements CardGeneratorService {
         : '';
     final prompt =
         '''
-You are a flashcard creator. Generate exactly $count flashcard pairs for the following topic.
+You are a flashcard creator. Generate EXACTLY $count flashcard pairs for the following topic. No more, no less.
 
 Rules:
 - "front": the term, word, question, or prompt the learner sees first.
@@ -48,13 +48,16 @@ Rules:
 - "back": the answer, definition, pronunciation hint, or explanation.
   - For CVC / phonics words: give a simple definition or example sentence, e.g. "A small furry pet that meows."
   - Keep backs concise — one sentence max.
-- Do NOT number the cards or add any extra keys.$excludeClause
+- Do NOT number the cards or add any extra keys.
+- Return EXACTLY $count items in the array — not more, not fewer.$excludeClause
 Return ONLY a valid JSON array with this exact shape:
 [{"front": "...", "back": "..."}, ...]
 
 Topic: $topic
 ''';
-    return _generate(prompt);
+    final results = await _generate(prompt);
+    // Hard-truncate — Gemini occasionally over-generates despite the instruction.
+    return results.length > count ? results.sublist(0, count) : results;
   }
 
   /// Generate flashcard suggestions from document text (PDF/txt content).

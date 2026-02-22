@@ -30,7 +30,12 @@ Feature: AI Deck Generation
     When I tap "Regenerate"
     Then a new set of cards should be generated for the same topic
 
-  Scenario: Adjust card count via slider up to 200
+  Scenario: Result count is always capped at the requested number
+    Given I request 20 cards on the AI generation screen
+    When the AI returns more than 20 results
+    Then the preview should contain exactly 20 cards
+
+  Scenario: Adjust card count via slider up to 100
     Given I am on the AI generation screen
     When I move the "Cards to generate" slider to 50
     Then the card count badge should show 50
@@ -42,9 +47,9 @@ Feature: AI Deck Generation
     And I tap "OK"
     Then the card count should be set to 75
 
-  Scenario: Custom card count is clamped between 1 and 200
+  Scenario: Custom card count is clamped between 1 and 100
     Given I am on the AI generation screen
-    When I tap the count badge and enter 250
+    When I tap the count badge and enter 150
     Then the dialog should not accept the value and the count should remain unchanged
 
 
