@@ -335,26 +335,20 @@ class _StarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     const maxStars = 3;
-    final stars = card.starCount.clamp(0, maxStars - 1);
+    final stars = card.starCount.clamp(0, maxStars);
     return GestureDetector(
       onTap: () => context.read<FlashcardBloc>().add(StarCard(card.id)),
       child: Tooltip(
-        message:
-            'I know this! (${card.starCount}/3 — at 3 it\'s archived)',
+        message: 'I know this! (${card.starCount}/3 — at 3 it\'s archived)',
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (int i = 0; i < maxStars - 1; i++)
+            for (int i = 0; i < maxStars; i++)
               Icon(
                 i < stars ? Icons.star : Icons.star_border,
-                size: 18,
+                size: 16,
                 color: i < stars ? cs.primary : cs.outlineVariant,
               ),
-            const SizedBox(width: 2),
-            Text(
-              '${card.starCount}/3',
-              style: TextStyle(fontSize: 10, color: cs.outline),
-            ),
           ],
         ),
       ),

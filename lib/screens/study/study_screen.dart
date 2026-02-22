@@ -259,7 +259,6 @@ class _StudyCardViewState extends State<_StudyCardView>
                   live ??= studyState.currentCard;
 
                   final cs = Theme.of(context).colorScheme;
-                  final starCount = live.starCount.clamp(0, 2);
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -268,7 +267,6 @@ class _StudyCardViewState extends State<_StudyCardView>
                             ? 'Already starred this card (${live.starCount}/3)'
                             : 'I know this card! (${live.starCount}/3 — at 3 it\'s archived)',
                         child: FilledButton.tonal(
-                          // Disabled once starred this session.
                           onPressed: alreadyStarred
                               ? null
                               : () {
@@ -281,37 +279,15 @@ class _StudyCardViewState extends State<_StudyCardView>
                                 },
                           style: FilledButton.styleFrom(
                             backgroundColor: alreadyStarred
-                                ? cs.surfaceContainerHighest
-                                : live.starCount > 0
-                                    ? cs.primaryContainer
-                                    : null,
+                                ? cs.primaryContainer
+                                : null,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (int i = 0; i < 2; i++)
-                                Icon(
-                                  i < starCount
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  size: 20,
-                                  color: alreadyStarred
-                                      ? cs.outline
-                                      : i < starCount
-                                          ? cs.primary
-                                          : cs.onSurfaceVariant,
-                                ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${live.starCount}/3',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: alreadyStarred
-                                      ? cs.outline
-                                      : cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
+                          child: Icon(
+                            alreadyStarred ? Icons.star : Icons.star_border,
+                            size: 22,
+                            color: alreadyStarred
+                                ? cs.primary
+                                : cs.onSurfaceVariant,
                           ),
                         ),
                       ),
