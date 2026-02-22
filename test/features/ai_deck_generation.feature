@@ -70,7 +70,19 @@ Feature: AI Deck Generation
     Then the document content should be parsed
     And flashcard suggestions should be extracted from the content
 
-  Scenario: Cannot generate without a topic or file
+  Scenario: Capitalise first letter toggle defaults to on
+    Given I am on the AI generation screen
+    Then the "Capitalise first letter" toggle should be on by default
+    When I tap "Generate Cards" with topic "animals"
+    Then each card front and back should start with a capital letter
+
+  Scenario: Turning off capitalisation preserves AI casing
+    Given I am on the AI generation screen
+    When I turn off the "Capitalise first letter" toggle
+    And I tap "Generate Cards" with topic "animals"
+    Then card fronts and backs should be returned exactly as the AI produced them
+
+
     Given I am on the AI generation screen
     When I tap "Generate Cards" with no topic entered and no file selected
     Then I should see a validation message

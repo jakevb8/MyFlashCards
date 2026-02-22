@@ -37,7 +37,8 @@ class GeminiDirectService implements CardGeneratorService {
     final excludeClause = exclude.isNotEmpty
         ? '\nDo NOT generate cards for any of these already covered:\n${exclude.map((e) => '- $e').join('\n')}\n'
         : '';
-    final prompt = '''
+    final prompt =
+        '''
 You are a flashcard creator. Generate exactly $count flashcard pairs for the following topic.
 
 Rules:

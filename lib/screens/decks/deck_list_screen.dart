@@ -49,7 +49,9 @@ class DeckListScreen extends StatelessWidget {
             }
             return Column(
               children: [
-                _SwipeHintBanner(message: 'Swipe left on a deck to edit or delete'),
+                _SwipeHintBanner(
+                  message: 'Swipe left on a deck to edit or delete',
+                ),
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
@@ -195,15 +197,16 @@ class _SwipeHintBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             message,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
 }
+
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

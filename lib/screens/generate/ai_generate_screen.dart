@@ -43,6 +43,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
   String? _fileName;
   String? _fileText;
   int _cardCount = 15; // user-adjustable (5–30)
+  bool _capitalise = true; // auto-capitalise first letter of each card side
 
   // "Add to existing deck" mode
   Deck? _targetDeck; // null = create new deck
@@ -54,6 +55,12 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
   void dispose() {
     _topicController.dispose();
     super.dispose();
+  }
+
+  /// Capitalises the first letter of [s] when [_capitalise] is true.
+  String _fmt(String s) {
+    if (!_capitalise || s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   // ── File picker ──────────────────────────────────────────────────────────
@@ -110,7 +117,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
 
       setState(() {
         _suggestions = cards
-            .map((c) => _EditableCard(front: c.front, back: c.back))
+            .map((c) => _EditableCard(front: _fmt(c.front), back: _fmt(c.back)))
             .toList();
       });
     } catch (e) {
@@ -141,7 +148,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
             (s) => _normalise(s.front) == _normalise(c.front),
           );
           if (!alreadyShown) {
-            _suggestions.add(_EditableCard(front: c.front, back: c.back));
+            _suggestions.add(_EditableCard(front: _fmt(c.front), back: _fmt(c.back)));
             added++;
           }
         }
@@ -186,7 +193,9 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
       final deck = _targetDeck!;
 
       // Load existing cards to deduplicate
-      final existing = await context.read<FlashcardBloc>().repository
+      final existing = await context
+          .read<FlashcardBloc>()
+          .repository
           .getFlashcards(deck.id);
 
       final newCards = <Flashcard>[];
@@ -195,19 +204,23 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
         if (_isDuplicate(card.front, existing)) {
           skipped++;
         } else {
-          newCards.add(Flashcard(
-            id: const Uuid().v4(),
-            deckId: deck.id,
-            front: card.front,
-            back: card.back,
-            createdAt: now,
-            updatedAt: now,
-          ));
+          newCards.add(
+            Flashcard(
+              id: const Uuid().v4(),
+              deckId: deck.id,
+              front: card.front,
+              back: card.back,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
         }
       }
 
       if (newCards.isEmpty) {
-        _snack('All ${cards.length} cards already exist in "${deck.name}". Nothing added.');
+        _snack(
+          'All ${cards.length} cards already exist in "${deck.name}". Nothing added.',
+        );
         return;
       }
 
@@ -240,14 +253,16 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
       );
 
       final flashcards = cards
-          .map((card) => Flashcard(
-                id: const Uuid().v4(),
-                deckId: deckId,
-                front: card.front,
-                back: card.back,
-                createdAt: now,
-                updatedAt: now,
-              ))
+          .map(
+            (card) => Flashcard(
+              id: const Uuid().v4(),
+              deckId: deckId,
+              front: card.front,
+              back: card.back,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          )
           .toList();
 
       if (!mounted) return;
@@ -442,6 +457,26 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
 
                       const SizedBox(height: 4),
 
+                      // ── Capitalise toggle ────────────────────────────────
+                      Row(
+                        children: [
+                          Text(
+                            'Capitalise first letter',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const Spacer(),
+                          Switch(
+                            value: _capitalise,
+                            onChanged: _loading
+                                ? null
+                                : (v) => setState(() => _capitalise = v),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
                       // ── Add to existing deck ─────────────────────────────
                       if (deckList.isNotEmpty) ...[
                         Row(
@@ -480,8 +515,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                                 ],
                                 onChanged: _loading
                                     ? null
-                                    : (v) =>
-                                        setState(() => _targetDeck = v),
+                                    : (v) => setState(() => _targetDeck = v),
                               ),
                             ),
                           ],
@@ -491,10 +525,7 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               'Duplicates will be skipped automatically.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: cs.outline,
-                              ),
+                              style: TextStyle(fontSize: 11, color: cs.outline),
                             ),
                           ),
                         const SizedBox(height: 16),
