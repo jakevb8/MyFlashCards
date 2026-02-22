@@ -98,5 +98,53 @@ void main() {
       act: (bloc) => bloc.add(PreviousCard()),
       expect: () => [],
     );
+
+    blocTest<StudyBloc, StudyState>(
+      'MarkStarredInSession adds cardId to starredThisSession',
+      build: () => StudyBloc(),
+      seed: () => StudyInProgress(cards: makeCards(2), currentIndex: 0),
+      act: (bloc) => bloc.add(const MarkStarredInSession('0')),
+      expect: () => [
+        isA<StudyInProgress>().having(
+          (s) => s.starredThisSession,
+          'starred set',
+          {'0'},
+        ),
+      ],
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'MarkStarredInSession for second card adds to set without removing first',
+      build: () => StudyBloc(),
+      seed: () => StudyInProgress(
+        cards: makeCards(2),
+        currentIndex: 0,
+        starredThisSession: {'0'},
+      ),
+      act: (bloc) => bloc.add(const MarkStarredInSession('1')),
+      expect: () => [
+        isA<StudyInProgress>().having(
+          (s) => s.starredThisSession,
+          'both cards starred',
+          {'0', '1'},
+        ),
+      ],
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'isStarredThisSession returns true only for starred card',
+      build: () => StudyBloc(),
+      seed: () => StudyInProgress(
+        cards: makeCards(2),
+        currentIndex: 0,
+        starredThisSession: {'0'},
+      ),
+      act: (bloc) {}, // no events needed — verify via seed state
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.isStarredThisSession('0'), isTrue);
+        expect(s.isStarredThisSession('1'), isFalse);
+      },
+    );
   });
 }

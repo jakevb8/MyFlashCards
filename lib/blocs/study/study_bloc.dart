@@ -14,6 +14,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     on<NextCard>(_onNextCard);
     on<PreviousCard>(_onPreviousCard);
     on<RestartSession>(_onRestartSession);
+    on<MarkStarredInSession>(_onMarkStarredInSession);
   }
 
   /// Swaps front/back on every card when [flipped] is true.
@@ -83,5 +84,17 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
         : List<Flashcard>.from(_originalCards);
     cards = _applyFlip(cards, _flipped);
     emit(StudyInProgress(cards: cards, currentIndex: 0));
+  }
+
+  void _onMarkStarredInSession(
+    MarkStarredInSession event,
+    Emitter<StudyState> emit,
+  ) {
+    if (state is StudyInProgress) {
+      final current = state as StudyInProgress;
+      emit(current.copyWith(
+        starredThisSession: {...current.starredThisSession, event.cardId},
+      ));
+    }
   }
 }

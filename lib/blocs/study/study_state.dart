@@ -13,11 +13,14 @@ class StudyInProgress extends StudyState {
   final List<Flashcard> cards;
   final int currentIndex;
   final bool showingFront;
+  /// IDs of cards that have been starred during this session (one per card).
+  final Set<String> starredThisSession;
 
   const StudyInProgress({
     required this.cards,
     required this.currentIndex,
     this.showingFront = true,
+    this.starredThisSession = const {},
   });
 
   Flashcard get currentCard => cards[currentIndex];
@@ -25,20 +28,25 @@ class StudyInProgress extends StudyState {
   bool get isLast => currentIndex == cards.length - 1;
   int get totalCards => cards.length;
 
+  bool isStarredThisSession(String cardId) =>
+      starredThisSession.contains(cardId);
+
   StudyInProgress copyWith({
     List<Flashcard>? cards,
     int? currentIndex,
     bool? showingFront,
+    Set<String>? starredThisSession,
   }) {
     return StudyInProgress(
       cards: cards ?? this.cards,
       currentIndex: currentIndex ?? this.currentIndex,
       showingFront: showingFront ?? this.showingFront,
+      starredThisSession: starredThisSession ?? this.starredThisSession,
     );
   }
 
   @override
-  List<Object?> get props => [cards, currentIndex, showingFront];
+  List<Object?> get props => [cards, currentIndex, showingFront, starredThisSession];
 }
 
 class StudyComplete extends StudyState {

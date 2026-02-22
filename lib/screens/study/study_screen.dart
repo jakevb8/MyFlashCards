@@ -238,58 +238,86 @@ class _StudyCardViewState extends State<_StudyCardView>
           ),
           const SizedBox(height: 16),
 
-          // Star button — reads live star count from FlashcardBloc
-          BlocBuilder<FlashcardBloc, FlashcardState>(
-            builder: (context, cardState) {
-              final cardId = state.currentCard.id;
-              // Find the live version of this card so star count stays fresh.
-              Flashcard? live;
-              if (cardState is FlashcardLoaded) {
-                try {
-                  live = cardState.flashcards.firstWhere((c) => c.id == cardId);
-                } catch (_) {}
-              }
-              live ??= state.currentCard;
+          // Star button — reads live star count from FlashcardBloc;
+          // limited to one star per card per session via StudyBloc.
+          BlocBuilder<StudyBloc, StudyState>(
+            builder: (context, studyState) {
+              if (studyState is! StudyInProgress) return const SizedBox.shrink();
+              final cardId = studyState.currentCard.id;
+              final alreadyStarred = studyState.isStarredThisSession(cardId);
 
-              final cs = Theme.of(context).colorScheme;
-              final starCount = live.starCount.clamp(0, 2);
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Tooltip(
-                    message: 'I know this card! (${live.starCount}/3 — at 3 it\'s archived)',
-                    child: FilledButton.tonal(
-                      onPressed: () =>
-                          context.read<FlashcardBloc>().add(StarCard(cardId)),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: live.starCount > 0
-                            ? cs.primaryContainer
-                            : null,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (int i = 0; i < 2; i++)
-                            Icon(
-                              i < starCount ? Icons.star : Icons.star_border,
-                              size: 20,
-                              color: i < starCount
-                                  ? cs.primary
-                                  : cs.onSurfaceVariant,
-                            ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${live.starCount}/3',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onSurfaceVariant,
-                            ),
+              return BlocBuilder<FlashcardBloc, FlashcardState>(
+                builder: (context, cardState) {
+                  // Find the live version of this card so star count stays fresh.
+                  Flashcard? live;
+                  if (cardState is FlashcardLoaded) {
+                    try {
+                      live = cardState.flashcards
+                          .firstWhere((c) => c.id == cardId);
+                    } catch (_) {}
+                  }
+                  live ??= studyState.currentCard;
+
+                  final cs = Theme.of(context).colorScheme;
+                  final starCount = live.starCount.clamp(0, 2);
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Tooltip(
+                        message: alreadyStarred
+                            ? 'Already starred this card (${live.starCount}/3)'
+                            : 'I know this card! (${live.starCount}/3 — at 3 it\'s archived)',
+                        child: FilledButton.tonal(
+                          // Disabled once starred this session.
+                          onPressed: alreadyStarred
+                              ? null
+                              : () {
+                                  context
+                                      .read<FlashcardBloc>()
+                                      .add(StarCard(cardId));
+                                  context
+                                      .read<StudyBloc>()
+                                      .add(MarkStarredInSession(cardId));
+                                },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: alreadyStarred
+                                ? cs.surfaceContainerHighest
+                                : live.starCount > 0
+                                    ? cs.primaryContainer
+                                    : null,
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (int i = 0; i < 2; i++)
+                                Icon(
+                                  i < starCount
+                                      ? Icons.star
+                                      : Icons.star_border,
+                                  size: 20,
+                                  color: alreadyStarred
+                                      ? cs.outline
+                                      : i < starCount
+                                          ? cs.primary
+                                          : cs.onSurfaceVariant,
+                                ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${live.starCount}/3',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: alreadyStarred
+                                      ? cs.outline
+                                      : cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               );
             },
           ),

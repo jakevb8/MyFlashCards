@@ -110,7 +110,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                         for (final card in archived)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: _ArchivedCardTile(card: card),
+                            child: _ArchivedCardTile(card: card, deck: deck),
                           ),
                       ],
                     ],
@@ -390,38 +390,103 @@ class _ArchivedHeader extends StatelessWidget {
   }
 }
 
-// ── Archived card row — shows front only + Unarchive action ─────────────────
+// ── Archived card row — swipeable with Edit, Delete, Unarchive actions ──────
 class _ArchivedCardTile extends StatelessWidget {
   final Flashcard card;
-  const _ArchivedCardTile({required this.card});
+  final Deck deck;
+  const _ArchivedCardTile({required this.card, required this.deck});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
-      color: cs.surfaceContainerHighest,
-      child: ListTile(
-        leading: Icon(Icons.archive_outlined, color: cs.outline),
-        title: Text(
-          card.front,
-          style: TextStyle(color: cs.onSurfaceVariant),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          card.back,
-          style: TextStyle(color: cs.outline, fontSize: 12),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: TextButton.icon(
-          onPressed: () =>
-              context.read<FlashcardBloc>().add(UnarchiveCard(card.id)),
-          icon: const Icon(Icons.unarchive_outlined, size: 16),
-          label: const Text('Unarchive'),
-          style: TextButton.styleFrom(
-            foregroundColor: cs.primary,
-            textStyle: const TextStyle(fontSize: 12),
+    return Slidable(
+      key: ValueKey('archived_${card.id}'),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        children: [
+          SlidableAction(
+            onPressed: (_) => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<FlashcardBloc>(),
+                  child: FlashcardFormScreen(deckId: deck.id, flashcard: card),
+                ),
+              ),
+            ),
+            backgroundColor: cs.secondary,
+            foregroundColor: cs.onSecondary,
+            icon: Icons.edit_outlined,
+            label: 'Edit',
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(12),
+            ),
+          ),
+          SlidableAction(
+            onPressed: (_) =>
+                context.read<FlashcardBloc>().add(DeleteFlashcard(card.id)),
+            backgroundColor: cs.error,
+            foregroundColor: cs.onError,
+            icon: Icons.delete_outline,
+            label: 'Delete',
+          ),
+          SlidableAction(
+            onPressed: (_) =>
+                context.read<FlashcardBloc>().add(UnarchiveCard(card.id)),
+            backgroundColor: cs.primary,
+            foregroundColor: cs.onPrimary,
+            icon: Icons.unarchive_outlined,
+            label: 'Unarchive',
+            borderRadius: const BorderRadius.horizontal(
+              right: Radius.circular(12),
+            ),
+          ),
+        ],
+      ),
+      child: Card(
+        color: cs.surfaceContainerHighest,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.archive_outlined, size: 16, color: cs.outline),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Archived',
+                    style: TextStyle(
+                      color: cs.outline,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Show mastered star badge
+                  Icon(Icons.star, size: 16, color: cs.outline),
+                  Icon(Icons.star, size: 16, color: cs.outline),
+                  const SizedBox(width: 2),
+                  Text(
+                    '3/3',
+                    style: TextStyle(fontSize: 10, color: cs.outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                card.front,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const Divider(height: 16),
+              Text(
+                card.back,
+                style: TextStyle(color: cs.outline),
+              ),
+            ],
           ),
         ),
       ),
