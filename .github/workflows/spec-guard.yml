@@ -25,6 +25,15 @@ jobs:
 
           echo "Diffing $BASE..$HEAD"
 
+          # Skip spec guard for style/chore/refactor/test/ci/docs commits
+          # (conventional commit prefixes that don't change user-visible behaviour)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if echo "$COMMIT_MSG" | grep -qiE '^(style|chore|refactor|test|ci|docs|build)\b'; then
+            echo "✅ Spec guard skipped — conventional commit type does not require a spec update."
+            echo "   Commit: $COMMIT_MSG"
+            exit 0
+          fi
+
           # Files changed in this push
           CHANGED=$(git diff --name-only "$BASE" "$HEAD")
 
@@ -48,6 +57,7 @@ jobs:
             echo "  1. Write or update the .feature file FIRST (before lib/ changes)"
             echo "  2. Update the .feature file AGAIN at the end to match final behaviour"
             echo "  3. Every user-visible behaviour change must have a corresponding scenario"
+            echo "  (Exempt prefixes: style, chore, refactor, test, ci, docs, build)"
             echo ""
             echo "Feature files live in: test/features/*.feature"
             exit 1
