@@ -49,6 +49,11 @@ google-services.json
 GoogleService-Info.plist
 lib/firebase_options.dart
 
+# Stray root-level Flutter scaffolding folders (not part of project)
+/widgets/
+/screens/
+/blocs/
+
 # Environment / secrets
 .env
 *.env
