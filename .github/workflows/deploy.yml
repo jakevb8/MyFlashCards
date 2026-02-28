@@ -1,15 +1,51 @@
-name: Deploy
+name: Build Release
 
 on:
   workflow_dispatch:
     inputs:
-      ver:
-        description: 'Version'
+      version:
+        description: 'Version (e.g., 1.0.0)'
         required: true
         default: '1.0.0'
 
 jobs:
-  deploy:
+  build:
+    name: Build & Release
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "Deploy version ${{ github.event.inputs.ver }}"
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.8"
+          channel: stable
+          cache: true
+
+      - name: Setup Firebase stub
+        run: cp lib/firebase_options_stub.dart lib/firebase_options.dart
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Decode keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/myflashcards-release.jks
+        shell: bash
+
+      - name: Build APK
+        run: flutter build apk --release
+        env:
+          RELEASE_STORE_FILE: myflashcards-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          draft: true
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
