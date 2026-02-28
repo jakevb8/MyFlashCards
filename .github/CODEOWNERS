@@ -1,0 +1,5 @@
+# Code Owners for MyFlashCards
+# These owners will be required reviewers for PRs affecting their files.
+
+# Default owner for all files
+* @jakevb8
