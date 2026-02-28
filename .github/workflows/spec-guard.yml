@@ -3,6 +3,8 @@ name: Spec Guard
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   spec-guard:
@@ -12,16 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Fetch enough history to diff against the previous commit
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check that .feature files were updated alongside lib/ changes
         id: spec_check
         shell: bash
         run: |
-          # Diff only the files changed in this single commit push
-          BASE=HEAD~1
-          HEAD=HEAD
+          # On a PR, diff the entire branch against the base branch.
+          # On a direct push to main, diff the single commit.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE=HEAD~1
+            HEAD=HEAD
+          fi
 
           echo "Diffing $BASE..$HEAD"
 

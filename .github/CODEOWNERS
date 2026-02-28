@@ -1,5 +1,6 @@
-# Code Owners for MyFlashCards
-# These owners will be required reviewers for PRs affecting their files.
+# CODEOWNERS — every PR requires review from the project owner.
+# GitHub automatically requests a review from these users when a PR touches the matched paths.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Default owner for all files
+# Default owner for everything
 * @jakevb8
