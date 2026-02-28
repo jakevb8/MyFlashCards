@@ -46,6 +46,10 @@ test/
 - Hive adapters are hand-written in `.g.dart` files (typeId 0 = Deck, 1 = Flashcard)
 - Always use `context.read<BlocType>()` for one-off calls and `BlocBuilder` for UI
 - Use Material 3 components and `AppTheme.light` / `AppTheme.dark`
+- **Always declare direct imports explicitly in `pubspec.yaml`** — do not rely on a package being transitively re-exported by another (e.g. `hive_ce` must be listed even though `hive_ce_flutter` includes it). The `depend_on_referenced_packages` rule is set to `error` in `analysis_options.yaml`.
+- **Capture `context`-dependent objects before any `await`** in async widget methods — read blocs, repos, etc. into local variables first, then `await`. Do not call `context.read<>()` after an await gap. The `use_build_context_synchronously` rule is set to `error`.
+- **Always wrap `if`/`else`/`for`/`while` bodies in braces `{}`**, even single-line statements. The `curly_braces_in_flow_control_structures` lint is enabled.
+- **Only show names you actually use** in `import … show` clauses. Remove any name not referenced in the file. The `unused_shown_name` rule is set to `error`.
 
 ## Testing Conventions
 - Unit tests: `test/unit/**/*_test.dart`

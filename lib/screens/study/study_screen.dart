@@ -245,8 +245,9 @@ class _StudyCardViewState extends State<_StudyCardView>
           // limited to one star per card per session via StudyBloc.
           BlocBuilder<StudyBloc, StudyState>(
             builder: (context, studyState) {
-              if (studyState is! StudyInProgress)
+              if (studyState is! StudyInProgress) {
                 return const SizedBox.shrink();
+              }
               final cardId = studyState.currentCard.id;
               final alreadyStarred = studyState.isStarredThisSession(cardId);
 

@@ -99,13 +99,17 @@ class _BackupScreenState extends State<BackupScreen> {
   });
 
   Future<void> _restore() => _run(() async {
+    // Capture context-dependent objects before any awaits.
+    final deckRepo = context.read<HiveDeckRepository>();
+    final cardRepo = context.read<HiveFlashcardRepository>();
+    final deckBloc = context.read<DeckBloc>();
+    final themeBloc = context.read<ThemeBloc>();
+
     final decks = await _service.restoreDecks();
     final cards = await _service.restoreFlashcards();
     final themeData = await _service.restoreThemeSettings();
 
     // Clear local Hive data first so restore is a true replacement.
-    final deckRepo = context.read<HiveDeckRepository>();
-    final cardRepo = context.read<HiveFlashcardRepository>();
     await deckRepo.clearAll();
     await cardRepo.clearAll();
 
@@ -118,7 +122,7 @@ class _BackupScreenState extends State<BackupScreen> {
     }
 
     // Reload DeckBloc so the deck list screen updates immediately.
-    if (mounted) context.read<DeckBloc>().add(LoadDecks());
+    if (mounted) deckBloc.add(LoadDecks());
 
     // Restore theme settings if present.
     if (mounted && themeData != null) {
@@ -129,11 +133,11 @@ class _BackupScreenState extends State<BackupScreen> {
           .values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
       final mode =
           ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
-      context.read<ThemeBloc>()
+      themeBloc
         ..add(ChangeThemeType(type))
         ..add(SetBrightness(mode));
-      if (isKids != context.read<ThemeBloc>().state.isKidsMode) {
-        context.read<ThemeBloc>().add(ToggleKidsMode());
+      if (isKids != themeBloc.state.isKidsMode) {
+        themeBloc.add(ToggleKidsMode());
       }
     }
 
