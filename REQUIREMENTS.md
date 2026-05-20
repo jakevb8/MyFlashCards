@@ -14,3 +14,5 @@
 | FEAT-005 | Multiple Study Modes           | queued    | P2       |        |
 | FEAT-006 | Deck Import / Export           | queued    | P2       |        |
 | FEAT-007 | Deck Sharing via Link          | queued    | P3       |        |
+| FEAT-008 | Backup V2                      | completed | P1       | 5e40f58 |
+| FEAT-009 | Privacy & Account Management   | queued    | P1       |        |
