@@ -67,3 +67,42 @@ Feature: Cloud Backup
     Then the deleted deck should be removed from Firestore
     And only currently local decks and cards should remain in Firestore
 
+  Scenario: Backup screen shows last backed up time after a successful backup
+    Given I am signed in
+    And I have previously backed up my data
+    When I navigate to the Cloud Backup screen
+    Then I should see "Last backed up" with a relative time
+
+  Scenario: Backup screen shows "Never backed up" when no backup exists
+    Given I am signed in
+    And I have never backed up
+    When I navigate to the Cloud Backup screen
+    Then I should see "Never backed up"
+
+  Scenario: Incremental backup skips unchanged records
+    Given I am signed in
+    And I have 3 decks already in Firestore with the same updatedAt as local
+    When I tap "Back Up Now"
+    Then zero deck documents should be written to Firestore
+    And the meta document should still be updated
+
+  Scenario: Restore shows confirmation dialog with counts before wiping data
+    Given I am signed in
+    And Firestore contains a backup of 4 decks and 12 cards
+    When I tap "Restore"
+    Then a confirmation dialog should appear showing "4 decks and 12 cards"
+    And local data should not be cleared until the user confirms
+
+  Scenario: Restore is cancelled from confirmation dialog
+    Given I am signed in
+    And Firestore contains a backup
+    When I tap "Restore"
+    And I tap "Cancel" in the confirmation dialog
+    Then local data should remain unchanged
+
+  Scenario: Schema version mismatch shows an error on restore
+    Given I am signed in
+    And Firestore contains documents with schemaVersion 99
+    When I tap "Restore"
+    Then I should see an error message mentioning the schema version
+

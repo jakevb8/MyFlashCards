@@ -130,10 +130,7 @@ class AccountDeletionService {
     final refs = snapshot.docs.map((d) => d.reference).toList();
 
     for (var i = 0; i < refs.length; i += _kBatchSize) {
-      final chunk = refs.sublist(
-        i,
-        (i + _kBatchSize).clamp(0, refs.length),
-      );
+      final chunk = refs.sublist(i, (i + _kBatchSize).clamp(0, refs.length));
       final batch = _firestore.batch();
       for (final ref in chunk) {
         batch.delete(ref);

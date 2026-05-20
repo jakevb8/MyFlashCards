@@ -96,8 +96,9 @@ class _BackupScreenState extends State<BackupScreen> {
     final cardState = context.read<FlashcardBloc>().state;
     final themeState = context.read<ThemeBloc>().state;
     final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
-    final cards =
-        cardState is FlashcardLoaded ? cardState.flashcards : <Flashcard>[];
+    final cards = cardState is FlashcardLoaded
+        ? cardState.flashcards
+        : <Flashcard>[];
     await _service.backupAll(
       decks: decks,
       cards: cards,
@@ -119,7 +120,7 @@ class _BackupScreenState extends State<BackupScreen> {
     final countText = meta == null
         ? 'your cloud backup'
         : '$deckCount deck${deckCount == 1 ? '' : 's'} and '
-            '$cardCount card${cardCount == 1 ? '' : 's'}';
+              '$cardCount card${cardCount == 1 ? '' : 's'}';
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -207,10 +208,9 @@ class _BackupScreenState extends State<BackupScreen> {
               Text(
                 'Back up your decks to Firebase',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -238,9 +238,9 @@ class _BackupScreenState extends State<BackupScreen> {
                     Text(
                       'Actions',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: cs.outline,
-                            letterSpacing: 1,
-                          ),
+                        color: cs.outline,
+                        letterSpacing: 1,
+                      ),
                     ),
                     if (_meta != null)
                       Text(
@@ -315,8 +315,9 @@ class _UserCard extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: cs.primaryContainer,
-              backgroundImage:
-                  user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+              backgroundImage: user.photoURL != null
+                  ? NetworkImage(user.photoURL!)
+                  : null,
               child: user.photoURL == null
                   ? Icon(Icons.person, color: cs.onPrimaryContainer)
                   : null,

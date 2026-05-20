@@ -188,8 +188,10 @@ class FirebaseBackupService {
   Future<void> backupFlashcards(List<Flashcard> cards) async {
     if (!isSignedIn) throw Exception('Not signed in');
     final uid = currentUser!.uid;
-    final col =
-        _firestore.collection('users').doc(uid).collection('flashcards');
+    final col = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('flashcards');
 
     final existing = await col.get();
     final localIds = cards.map((c) => c.id).toSet();
@@ -298,14 +300,16 @@ class FirebaseBackupService {
   Future<void> _commitBatch({
     required List<DocumentReference<Map<String, dynamic>>> toDelete,
     required Map<DocumentReference<Map<String, dynamic>>, Map<String, dynamic>>
-        toWrite,
+    toWrite,
   }) async {
     const chunkSize = 400;
     final allOps = <Future<void>>[];
 
     for (var i = 0; i < toDelete.length; i += chunkSize) {
-      final chunk =
-          toDelete.sublist(i, (i + chunkSize).clamp(0, toDelete.length));
+      final chunk = toDelete.sublist(
+        i,
+        (i + chunkSize).clamp(0, toDelete.length),
+      );
       final batch = _firestore.batch();
       for (final ref in chunk) {
         batch.delete(ref);
@@ -316,7 +320,9 @@ class FirebaseBackupService {
     final writeEntries = toWrite.entries.toList();
     for (var i = 0; i < writeEntries.length; i += chunkSize) {
       final chunk = writeEntries.sublist(
-          i, (i + chunkSize).clamp(0, writeEntries.length));
+        i,
+        (i + chunkSize).clamp(0, writeEntries.length),
+      );
       final batch = _firestore.batch();
       for (final entry in chunk) {
         batch.set(entry.key, entry.value);

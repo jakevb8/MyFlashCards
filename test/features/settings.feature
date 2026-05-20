@@ -1,0 +1,63 @@
+Feature: Settings
+  As a user
+  I want to manage my account and review the privacy policy
+  So that I can control my data and understand how it is used
+
+  Scenario: Settings screen is accessible from the deck list
+    Given I am on the deck list screen
+    When I tap the settings icon in the app bar
+    Then I should be on the Settings screen
+
+  Scenario: Signed-in user sees their account details in Settings
+    Given I am signed in as "octocat"
+    When I navigate to the Settings screen
+    Then I should see "octocat" in the Account section
+    And I should see a "Sign out" option
+    And I should see a "Delete my account" option
+
+  Scenario: Guest user does not see the Account section
+    Given I am not signed in
+    When I navigate to the Settings screen
+    Then I should not see the Account section
+
+  Scenario: Sign out from Settings
+    Given I am signed in
+    When I navigate to the Settings screen
+    And I tap "Sign out"
+    Then I should no longer be signed in
+    And the Account section should no longer be visible
+
+  Scenario: Delete account shows confirmation dialog
+    Given I am signed in
+    When I navigate to the Settings screen
+    And I tap "Delete my account"
+    Then a confirmation dialog should appear
+    And I should see a destructive "Delete" button and a "Cancel" button
+
+  Scenario: Cancel account deletion leaves data intact
+    Given I am signed in
+    When I navigate to the Settings screen
+    And I tap "Delete my account"
+    And I tap "Cancel" in the confirmation dialog
+    Then my account should still exist
+    And my local data should be unchanged
+
+  Scenario: Confirmed account deletion removes all data
+    Given I am signed in with local data present
+    When I navigate to the Settings screen
+    And I tap "Delete my account"
+    And I confirm deletion
+    Then all Firestore data under my user ID should be deleted
+    And my Firebase Auth account should be deleted
+    And my local Hive data should be cleared
+    And the Account section should no longer be visible
+
+  Scenario: Privacy policy is accessible from Settings
+    Given I am on the Settings screen
+    When I tap "Privacy Policy"
+    Then I should see the Privacy Policy screen
+    And it should describe what data is collected and how to delete it
+
+  Scenario: App version is shown in About section
+    Given I am on the Settings screen
+    Then I should see a version number in the About section
