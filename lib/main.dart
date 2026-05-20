@@ -17,6 +17,7 @@ import 'repositories/hive_flashcard_repository.dart';
 import 'screens/decks/deck_list_screen.dart';
 import 'screens/backup/backup_screen.dart';
 import 'screens/generate/ai_generate_screen.dart';
+import 'screens/settings/settings_screen.dart';
 import 'services/firebase_backup_service.dart';
 
 // SharedPreferences key tracking when the last auto-backup ran.
@@ -141,6 +142,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
               routes: {
                 '/backup': (_) => const BackupScreen(),
                 '/generate': (_) => const AiGenerateScreen(),
+                '/settings': (_) => const SettingsScreen(),
               },
             );
           },

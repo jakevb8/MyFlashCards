@@ -39,6 +39,9 @@ dependencies:
   google_generative_ai: ^0.4.6
   file_picker: ^8.3.3
 
+  # Launch URLs in browser (privacy policy, etc.)
+  url_launcher: ^6.3.1
+
   # UI
   flutter_slidable: ^3.1.1
   google_fonts: ^6.2.1
