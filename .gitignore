@@ -57,3 +57,6 @@ lib/firebase_options.dart
 # Environment / secrets
 .env
 *.env
+
+# Claude Code context rules — private, not for public repo
+CLAUDE.md
