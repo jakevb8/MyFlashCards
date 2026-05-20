@@ -5,42 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-001] Google Sign-In
-
-**Goal:** Replace the current GitHub OAuth flow with Google Sign-In so users can authenticate with their Google account using a first-class, low-friction flow.
-
-**Why:** GitHub OAuth requires a browser redirect + deep-link callback — clunky on mobile. Google Sign-In is native, one-tap on Android, and is the standard for Firebase-backed Flutter apps. It also unlocks the user's Google identity for future features (e.g. Google Drive export).
-
-**Scope:**
-- Add `google_sign_in` package
-- Create `GoogleAuthService` in `lib/services/` wrapping `GoogleSignIn` + `FirebaseAuth.signInWithCredential`
-- Add a "Sign in with Google" button on the login/welcome screen
-- Wire the existing `AuthBloc` (or create one) to handle `GoogleSignInRequested`, `GoogleSignInSuccess`, `GoogleSignInFailure` events
-- On success, navigate to `DeckListScreen`
-- On failure, show a typed `AuthException` (never raw `FirebaseAuthException`)
-- Keep anonymous / guest mode if it already exists — Google Sign-In is additive
-- Update Firestore security rules to confirm `request.auth.uid` ownership still holds (it does — Google Sign-In still produces a Firebase UID)
-
-**Acceptance Criteria:**
-- [ ] User can tap "Sign in with Google", complete the Google consent screen, and land on the deck list
-- [ ] User's UID-namespaced Firestore data is accessible immediately after sign-in
-- [ ] Signing out clears credentials (`GoogleSignIn.signOut()` + `FirebaseAuth.signOut()`)
-- [ ] `flutter test` and `flutter analyze` pass with zero issues
-- [ ] No hardcoded credentials anywhere
-
-**Packages to add:**
-```yaml
-google_sign_in: ^6.2.2
-```
-
-**Files to create/modify:**
-- `lib/services/google_auth_service.dart` (new)
-- `lib/blocs/auth/` (new — `auth_bloc.dart`, `auth_event.dart`, `auth_state.dart`)
-- `lib/screens/auth/login_screen.dart` (new or modify existing)
-- `pubspec.yaml`
-
----
-
 ## [FEAT-002] Gemini API Key Settings
 
 **Goal:** Let users enter their own Google Gemini API key in a Settings screen, with an in-app walkthrough explaining how to get a free key. The key is stored securely and used for all AI card-generation features.

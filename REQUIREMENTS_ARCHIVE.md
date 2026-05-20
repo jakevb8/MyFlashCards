@@ -2,6 +2,17 @@
 
 Completed feature specs are moved here from `REQUIREMENTS_SPECS.md` after their commit is pushed.
 
+## [FEAT-001] Google Sign-In — completed 172c4c9
+
+`signInWithGoogle()` added to `FirebaseBackupService` — native Google account picker,
+exchanges credential via `GoogleAuthProvider.credential`, throws typed Exception on
+dismissal. `signOut()` updated to sign out Google first then Firebase (order matters).
+BackupScreen now shows Google card (recommended) above GitHub card. iOS `Info.plist`
+`CFBundleURLTypes` entry added with REVERSED_CLIENT_ID placeholder.
+
+Files changed: `firebase_backup_service.dart`, `backup_screen.dart`,
+`ios/Runner/Info.plist`, `pubspec.yaml`.
+
 ## [FEAT-008] Backup V2 — completed 5e40f58
 
 Incremental Firestore sync, `BackupMeta` + `BackupSchemaException` typed classes,
