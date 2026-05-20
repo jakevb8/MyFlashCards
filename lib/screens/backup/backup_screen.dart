@@ -26,13 +26,28 @@ class BackupScreen extends StatefulWidget {
 class _BackupScreenState extends State<BackupScreen> {
   final _service = FirebaseBackupService();
   bool _loading = false;
+  BackupMeta? _meta;
 
   User? get _user => _service.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_service.isSignedIn) _loadMeta();
+  }
+
+  /// Loads last-backup metadata from Firestore and updates the UI.
+  Future<void> _loadMeta() async {
+    final meta = await _service.readMeta();
+    if (mounted) setState(() => _meta = meta);
+  }
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() => _loading = true);
     try {
       await action();
+    } on BackupSchemaException catch (e) {
+      _snack(e.toString(), isError: true);
     } on FirebaseAuthException catch (e) {
       _snack(e.message ?? e.code, isError: true);
     } catch (e) {
@@ -54,16 +69,11 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _signInGitHub() => _run(() async {
-    // signInWithProvider (ASWebAuthenticationSession) crashes on the
-    // iOS simulator. Show a clear message instead of crashing.
+    // signInWithProvider crashes on the iOS Simulator in debug mode —
+    // ASWebAuthenticationSession is not supported there.
     if (defaultTargetPlatform == TargetPlatform.iOS &&
         kDebugMode &&
         kIsWeb == false) {
-      // We can't import dart:io in web builds but this path is iOS only.
-      // The simulator identifier is injected via DART_VM_OPTIONS by Xcode,
-      // so we detect it through the SIMULATOR_UDID env approach at build
-      // time. Simplest safe guard: always allow on real devices (profile/
-      // release), only warn in debug simulator runs.
       throw Exception(
         'GitHub sign-in is not supported on the iOS Simulator.\n'
         'Please run on a real device or use Android.',
@@ -72,11 +82,12 @@ class _BackupScreenState extends State<BackupScreen> {
     await _service.signInWithGitHub();
     setState(() {});
     _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
+    await _loadMeta();
   });
 
   Future<void> _signOut() => _run(() async {
     await _service.signOut();
-    setState(() {});
+    setState(() => _meta = null);
     _snack('Signed out');
   });
 
@@ -85,64 +96,99 @@ class _BackupScreenState extends State<BackupScreen> {
     final cardState = context.read<FlashcardBloc>().state;
     final themeState = context.read<ThemeBloc>().state;
     final decks = deckState is DeckLoaded ? deckState.decks : <Deck>[];
-    final cards = cardState is FlashcardLoaded
-        ? cardState.flashcards
-        : <Flashcard>[];
-    await _service.backupDecks(decks);
-    await _service.backupFlashcards(cards);
-    await _service.backupThemeSettings(
+    final cards =
+        cardState is FlashcardLoaded ? cardState.flashcards : <Flashcard>[];
+    await _service.backupAll(
+      decks: decks,
+      cards: cards,
       themeTypeIndex: themeState.themeType.index,
       themeModeIndex: themeState.themeMode.index,
       isKidsMode: themeState.isKidsMode,
     );
+    await _loadMeta();
     _snack('Backed up ${decks.length} decks and ${cards.length} cards ✓');
   });
 
-  Future<void> _restore() => _run(() async {
-    // Capture context-dependent objects before any awaits.
-    final deckRepo = context.read<HiveDeckRepository>();
-    final cardRepo = context.read<HiveFlashcardRepository>();
-    final deckBloc = context.read<DeckBloc>();
-    final themeBloc = context.read<ThemeBloc>();
+  Future<void> _restore() async {
+    // Fetch meta first so the confirmation dialog can show counts.
+    final meta = await _service.readMeta();
+    if (!mounted) return;
 
-    final decks = await _service.restoreDecks();
-    final cards = await _service.restoreFlashcards();
-    final themeData = await _service.restoreThemeSettings();
+    final deckCount = meta?.deckCount ?? 0;
+    final cardCount = meta?.cardCount ?? 0;
+    final countText = meta == null
+        ? 'your cloud backup'
+        : '$deckCount deck${deckCount == 1 ? '' : 's'} and '
+            '$cardCount card${cardCount == 1 ? '' : 's'}';
 
-    // Clear local Hive data first so restore is a true replacement.
-    await deckRepo.clearAll();
-    await cardRepo.clearAll();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore backup?'),
+        content: Text(
+          'This will replace all local data with $countText from Firestore. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
 
-    // Write restored data into Hive.
-    for (final deck in decks) {
-      await deckRepo.addDeck(deck);
-    }
-    for (final card in cards) {
-      await cardRepo.addFlashcard(card);
-    }
+    await _run(() async {
+      // Capture context-dependent objects before any awaits.
+      final deckRepo = context.read<HiveDeckRepository>();
+      final cardRepo = context.read<HiveFlashcardRepository>();
+      final deckBloc = context.read<DeckBloc>();
+      final themeBloc = context.read<ThemeBloc>();
 
-    // Reload DeckBloc so the deck list screen updates immediately.
-    if (mounted) deckBloc.add(LoadDecks());
+      final decks = await _service.restoreDecks();
+      final cards = await _service.restoreFlashcards();
+      final themeData = await _service.restoreThemeSettings();
 
-    // Restore theme settings if present.
-    if (mounted && themeData != null) {
-      final typeIndex = themeData['themeTypeIndex'] as int;
-      final modeIndex = themeData['themeModeIndex'] as int;
-      final isKids = themeData['isKidsMode'] as bool;
-      final type = AppThemeType
-          .values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
-      final mode =
-          ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
-      themeBloc
-        ..add(ChangeThemeType(type))
-        ..add(SetBrightness(mode));
-      if (isKids != themeBloc.state.isKidsMode) {
-        themeBloc.add(ToggleKidsMode());
+      // Clear local Hive data first so restore is a true replacement.
+      await deckRepo.clearAll();
+      await cardRepo.clearAll();
+
+      for (final deck in decks) {
+        await deckRepo.addDeck(deck);
       }
-    }
+      for (final card in cards) {
+        await cardRepo.addFlashcard(card);
+      }
 
-    _snack('Restored ${decks.length} decks and ${cards.length} cards ✓');
-  });
+      if (mounted) deckBloc.add(LoadDecks());
+
+      if (mounted && themeData != null) {
+        final typeIndex = themeData['themeTypeIndex'] as int;
+        final modeIndex = themeData['themeModeIndex'] as int;
+        final isKids = themeData['isKidsMode'] as bool;
+        final type = AppThemeType
+            .values[typeIndex.clamp(0, AppThemeType.values.length - 1)];
+        final mode =
+            ThemeMode.values[modeIndex.clamp(0, ThemeMode.values.length - 1)];
+        themeBloc
+          ..add(ChangeThemeType(type))
+          ..add(SetBrightness(mode));
+        if (isKids != themeBloc.state.isKidsMode) {
+          themeBloc.add(ToggleKidsMode());
+        }
+      }
+
+      _snack('Restored ${decks.length} decks and ${cards.length} cards ✓');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,9 +207,10 @@ class _BackupScreenState extends State<BackupScreen> {
               Text(
                 'Back up your decks to Firebase',
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -185,12 +232,27 @@ class _BackupScreenState extends State<BackupScreen> {
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
-                Text(
-                  'Actions',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: cs.outline,
-                    letterSpacing: 1,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Actions',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: cs.outline,
+                            letterSpacing: 1,
+                          ),
+                    ),
+                    if (_meta != null)
+                      Text(
+                        'Last backed up ${_relativeTime(_meta!.lastBackupAt)}',
+                        style: TextStyle(fontSize: 12, color: cs.outline),
+                      )
+                    else
+                      Text(
+                        'Never backed up',
+                        style: TextStyle(fontSize: 12, color: cs.outline),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 _ActionCard(
@@ -203,7 +265,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 _ActionCard(
                   icon: Icons.cloud_download_outlined,
                   title: 'Restore',
-                  subtitle: 'Download your decks and cards from Firestore',
+                  subtitle: 'Replace local data with your Firestore backup',
                   onTap: _loading ? null : _restore,
                 ),
               ],
@@ -219,6 +281,22 @@ class _BackupScreenState extends State<BackupScreen> {
         ],
       ),
     );
+  }
+
+  /// Returns a human-readable relative time string (e.g. "2 hours ago").
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) {
+      final m = diff.inMinutes;
+      return '$m minute${m == 1 ? '' : 's'} ago';
+    }
+    if (diff.inHours < 24) {
+      final h = diff.inHours;
+      return '$h hour${h == 1 ? '' : 's'} ago';
+    }
+    final d = diff.inDays;
+    return '$d day${d == 1 ? '' : 's'} ago';
   }
 }
 
@@ -237,9 +315,8 @@ class _UserCard extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: cs.primaryContainer,
-              backgroundImage: user.photoURL != null
-                  ? NetworkImage(user.photoURL!)
-                  : null,
+              backgroundImage:
+                  user.photoURL != null ? NetworkImage(user.photoURL!) : null,
               child: user.photoURL == null
                   ? Icon(Icons.person, color: cs.onPrimaryContainer)
                   : null,

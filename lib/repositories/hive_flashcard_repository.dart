@@ -21,6 +21,11 @@ class HiveFlashcardRepository implements FlashcardRepository {
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
+  /// Returns every flashcard across all decks — used by the backup service.
+  Future<List<Flashcard>> getAllFlashcards() async {
+    return _box.values.toList();
+  }
+
   @override
   Future<Flashcard> getFlashcard(String id) async {
     return _box.values.firstWhere((c) => c.id == id);
