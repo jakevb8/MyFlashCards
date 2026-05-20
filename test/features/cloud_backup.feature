@@ -106,3 +106,17 @@ Feature: Cloud Backup
     When I tap "Restore"
     Then I should see an error message mentioning the schema version
 
+  Scenario: Sign in with Google
+    Given I am not signed in
+    When I tap "Sign in with Google"
+    Then the Google account picker is shown
+    And after selecting an account I should be signed in
+    And I should see my Google display name
+
+  Scenario: Google sign-in cancelled shows no error
+    Given I am not signed in
+    When I tap "Sign in with Google"
+    And I dismiss the account picker without selecting
+    Then I should remain on the sign-in screen
+    And no error message should be shown
+

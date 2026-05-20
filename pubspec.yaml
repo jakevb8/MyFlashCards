@@ -32,6 +32,9 @@ dependencies:
   # GitHub OAuth deep-link callback handler
   app_links: ^6.4.0
 
+  # Google Sign-In — native OAuth, no browser window required
+  google_sign_in: ^6.2.2
+
   # Theme persistence
   shared_preferences: ^2.5.3
 

@@ -1,3 +1,16 @@
+// backup_screen.dart
+//
+// Cloud Backup screen — lets the user sign in (Google or GitHub), manually
+// back up all decks/cards/theme to Firestore, and restore from a prior backup.
+//
+// Key invariants:
+//   - All Firebase operations are delegated to FirebaseBackupService; no
+//     Firestore or Auth calls are made directly in this file.
+//   - _loading gates every async action so the user cannot trigger concurrent
+//     operations (e.g. tapping Back Up Now twice).
+//   - Google sign-in is the recommended path (native picker, no browser);
+//     GitHub OAuth is kept as an alternative for users who prefer it.
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +81,19 @@ class _BackupScreenState extends State<BackupScreen> {
     );
   }
 
+  /// Starts the Google native account picker and signs into Firebase.
+  /// No browser window is opened — the OS-level account picker is used,
+  /// which is why Google is the recommended sign-in path.
+  Future<void> _signInGoogle() => _run(() async {
+    await _service.signInWithGoogle();
+    setState(() {});
+    _snack('Signed in as ${_user?.displayName ?? _user?.email ?? 'user'}');
+    await _loadMeta();
+  });
+
+  /// Signs in with GitHub using Firebase's built-in OAuth flow.
+  /// Not available on the iOS Simulator because ASWebAuthenticationSession
+  /// (the underlying browser session API) is unsupported there.
   Future<void> _signInGitHub() => _run(() async {
     // signInWithProvider crashes on the iOS Simulator in debug mode —
     // ASWebAuthenticationSession is not supported there.
@@ -221,6 +247,15 @@ class _BackupScreenState extends State<BackupScreen> {
               ),
               const SizedBox(height: 32),
               if (!signedIn) ...[
+                // Google is listed first as the recommended option — native
+                // picker requires no browser and works on the iOS Simulator.
+                _ActionCard(
+                  icon: Icons.g_mobiledata,
+                  title: 'Sign in with Google',
+                  subtitle: 'Recommended — one tap, no browser window',
+                  onTap: _loading ? null : _signInGoogle,
+                ),
+                const SizedBox(height: 12),
                 _ActionCard(
                   icon: Icons.code,
                   title: 'Sign in with GitHub',

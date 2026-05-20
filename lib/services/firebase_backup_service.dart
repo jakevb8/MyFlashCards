@@ -17,6 +17,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
 
@@ -69,6 +70,10 @@ class FirebaseBackupService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // GoogleSignIn instance is kept at the class level so signOut() can revoke
+  // the Google session before invalidating the Firebase session — order matters.
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   User? get currentUser => _auth.currentUser;
   bool get isSignedIn => currentUser != null;
 
@@ -89,7 +94,30 @@ class FirebaseBackupService {
     return _auth.signInWithProvider(provider);
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Signs in with Google via OAuth, then exchanges the Google credential
+  /// for a Firebase Auth session. Returns the Firebase UserCredential.
+  /// Throws [Exception('Google sign-in cancelled')] if the user dismisses
+  /// the picker without selecting an account.
+  Future<UserCredential> signInWithGoogle() async {
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) throw Exception('Google sign-in cancelled');
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    return _auth.signInWithCredential(credential);
+  }
+
+  /// Signs the user out of both Google and Firebase.
+  /// Google sign-out is performed first because Firebase sign-out invalidates
+  /// the session that GoogleSignIn still holds; reversing the order can leave
+  /// a stale Google token. Calling _googleSignIn.signOut() is safe even when
+  /// the user authenticated via GitHub — it is a no-op in that case.
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+  }
 
   // ── Meta ────────────────────────────────────────────────────────────────────
 
