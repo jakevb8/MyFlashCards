@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'blocs/analytics/analytics_bloc.dart';
+import 'blocs/analytics/analytics_event.dart';
 import 'blocs/deck/deck_bloc.dart';
 import 'blocs/deck/deck_event.dart';
 import 'blocs/flashcard/flashcard_bloc.dart';
@@ -12,8 +14,11 @@ import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
+import 'models/study_session.dart';
 import 'repositories/hive_deck_repository.dart';
 import 'repositories/hive_flashcard_repository.dart';
+import 'repositories/hive_study_session_repository.dart';
+import 'screens/analytics/analytics_screen.dart';
 import 'screens/decks/deck_list_screen.dart';
 import 'screens/backup/backup_screen.dart';
 import 'screens/generate/ai_generate_screen.dart';
@@ -31,8 +36,10 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(DeckAdapter());
   Hive.registerAdapter(FlashcardAdapter());
+  Hive.registerAdapter(StudySessionAdapter());
   await HiveDeckRepository.init();
   await HiveFlashcardRepository.init();
+  await HiveStudySessionRepository.init();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -54,9 +61,11 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
   late final ThemeBloc _themeBloc;
   late final DeckBloc _deckBloc;
   late final FlashcardBloc _flashcardBloc;
+  late final AnalyticsBloc _analyticsBloc;
 
   final _deckRepo = HiveDeckRepository();
   final _cardRepo = HiveFlashcardRepository();
+  final _sessionRepo = HiveStudySessionRepository();
   final _backupService = FirebaseBackupService();
 
   @override
@@ -65,6 +74,8 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     _themeBloc = ThemeBloc(initialState: widget.initialTheme);
     _deckBloc = DeckBloc(repository: _deckRepo)..add(LoadDecks());
     _flashcardBloc = FlashcardBloc(repository: _cardRepo);
+    _analyticsBloc = AnalyticsBloc(sessionRepository: _sessionRepo)
+      ..add(const LoadAnalytics());
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -74,6 +85,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     _themeBloc.close();
     _deckBloc.close();
     _flashcardBloc.close();
+    _analyticsBloc.close();
     super.dispose();
   }
 
@@ -123,12 +135,14 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
       providers: [
         RepositoryProvider.value(value: _deckRepo),
         RepositoryProvider.value(value: _cardRepo),
+        RepositoryProvider.value(value: _sessionRepo),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: _themeBloc),
           BlocProvider.value(value: _deckBloc),
           BlocProvider.value(value: _flashcardBloc),
+          BlocProvider.value(value: _analyticsBloc),
         ],
         child: BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {
@@ -140,6 +154,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
               themeMode: themeState.themeMode,
               home: const DeckListScreen(),
               routes: {
+                '/analytics': (_) => const AnalyticsScreen(),
                 '/backup': (_) => const BackupScreen(),
                 '/generate': (_) => const AiGenerateScreen(),
                 '/settings': (_) => const SettingsScreen(),

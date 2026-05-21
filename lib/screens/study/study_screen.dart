@@ -8,7 +8,10 @@ import '../../blocs/study/study_event.dart';
 import '../../blocs/study/study_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
+import '../../blocs/analytics/analytics_bloc.dart';
+import '../../blocs/analytics/analytics_event.dart';
 import '../../repositories/flashcard_repository.dart';
+import '../../repositories/study_session_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class StudyScreen extends StatelessWidget {
@@ -29,15 +32,24 @@ class StudyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          StudyBloc(flashcardRepository: context.read<FlashcardRepository>())
-            ..add(
-              StartStudySession(
-                flashcards: flashcards,
-                randomize: randomize,
-                flipped: flipped,
-              ),
+          StudyBloc(
+            flashcardRepository: context.read<FlashcardRepository>(),
+            sessionRepository: context.read<StudySessionRepository>(),
+          )..add(
+            StartStudySession(
+              flashcards: flashcards,
+              randomize: randomize,
+              flipped: flipped,
             ),
-      child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
+          ),
+      // BlocListener refreshes analytics once the session completes so the
+      // streak chip and analytics screen show up-to-date data immediately.
+      child: BlocListener<StudyBloc, StudyState>(
+        listenWhen: (_, s) => s is StudyComplete,
+        listener: (context, _) =>
+            context.read<AnalyticsBloc>().add(const LoadAnalytics()),
+        child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
+      ),
     );
   }
 }

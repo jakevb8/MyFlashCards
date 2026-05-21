@@ -5,11 +5,13 @@
 import 'package:hive_ce/hive.dart';
 import 'package:my_flash_cards/models/deck.dart';
 import 'package:my_flash_cards/models/flashcard.dart';
+import 'package:my_flash_cards/models/study_session.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(DeckAdapter());
     registerAdapter(FlashcardAdapter());
+    registerAdapter(StudySessionAdapter());
   }
 }
 
@@ -17,5 +19,6 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(DeckAdapter());
     registerAdapter(FlashcardAdapter());
+    registerAdapter(StudySessionAdapter());
   }
 }

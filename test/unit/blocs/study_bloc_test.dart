@@ -4,7 +4,22 @@ import 'package:my_flash_cards/blocs/study/study_bloc.dart';
 import 'package:my_flash_cards/blocs/study/study_event.dart';
 import 'package:my_flash_cards/blocs/study/study_state.dart';
 import 'package:my_flash_cards/models/flashcard.dart';
+import 'package:my_flash_cards/models/study_session.dart';
 import 'package:my_flash_cards/repositories/flashcard_repository.dart';
+import 'package:my_flash_cards/repositories/study_session_repository.dart';
+
+class FakeStudySessionRepository implements StudySessionRepository {
+  final List<StudySession> sessions = [];
+
+  @override
+  Future<List<StudySession>> getSessions() async => List.from(sessions);
+
+  @override
+  Future<void> addSession(StudySession session) async => sessions.add(session);
+
+  @override
+  Future<void> clearAll() async => sessions.clear();
+}
 
 // Minimal in-memory repository used by tests that trigger RateCard.
 class FakeFlashcardRepository implements FlashcardRepository {
@@ -52,8 +67,10 @@ List<Flashcard> makeCards(int count) {
   );
 }
 
-StudyBloc makeBloc() =>
-    StudyBloc(flashcardRepository: FakeFlashcardRepository());
+StudyBloc makeBloc() => StudyBloc(
+  flashcardRepository: FakeFlashcardRepository(),
+  sessionRepository: FakeStudySessionRepository(),
+);
 
 void main() {
   group('StudyBloc', () {

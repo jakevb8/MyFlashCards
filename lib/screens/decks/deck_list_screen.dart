@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../blocs/analytics/analytics_state.dart';
+import '../../blocs/analytics/analytics_bloc.dart';
 import '../../blocs/deck/deck_bloc.dart';
 import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
@@ -18,6 +20,11 @@ class DeckListScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Flashcard Decks'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_outlined),
+            tooltip: 'Study Analytics',
+            onPressed: () => Navigator.pushNamed(context, '/analytics'),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
@@ -54,6 +61,7 @@ class DeckListScreen extends StatelessWidget {
             }
             return Column(
               children: [
+                _StreakBanner(),
                 _SwipeHintBanner(
                   message: 'Swipe left on a deck to edit or delete',
                 ),
@@ -86,6 +94,50 @@ class DeckListScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const DeckFormScreen()),
+    );
+  }
+}
+
+/// Streak badge shown above the deck list. Hidden when streak is 0 or data
+/// is not yet loaded, to avoid a blank bar on first launch.
+class _StreakBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AnalyticsBloc, AnalyticsState>(
+      builder: (context, state) {
+        if (state is! AnalyticsLoaded || state.streak == 0) {
+          return const SizedBox.shrink();
+        }
+        final cs = Theme.of(context).colorScheme;
+        return InkWell(
+          onTap: () => Navigator.pushNamed(context, '/analytics'),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: cs.primaryContainer,
+            child: Row(
+              children: [
+                Icon(Icons.local_fire_department, size: 18, color: cs.primary),
+                const SizedBox(width: 6),
+                Text(
+                  '${state.streak} day streak! Keep it up ',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: cs.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Text('🔥'),
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: cs.onPrimaryContainer,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
