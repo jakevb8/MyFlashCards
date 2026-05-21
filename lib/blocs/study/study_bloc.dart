@@ -1,20 +1,57 @@
+// StudyBloc — manages an active flashcard study session.
+//
+// Responsibilities:
+//   - Filters the provided card list to only those due today (SM-2 scheduling).
+//   - Drives the flip animation state machine (showingFront).
+//   - Handles SM-2 ratings: computes new schedule via SpacedRepetitionService,
+//     persists to Hive via FlashcardRepository, then advances the session.
+//
+// Session lifecycle: StudyInitial → StudyInProgress (per card) → StudyComplete.
+// StudyEmpty is emitted when no due cards exist at session start.
+
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/flashcard.dart';
+import '../../repositories/flashcard_repository.dart';
+import '../../services/spaced_repetition_service.dart';
 import 'study_event.dart';
 import 'study_state.dart';
 
 class StudyBloc extends Bloc<StudyEvent, StudyState> {
+  final FlashcardRepository _flashcardRepository;
+  final SpacedRepetitionService _srService;
+
   List<Flashcard> _originalCards = [];
   bool _flipped = false;
 
-  StudyBloc() : super(StudyInitial()) {
+  StudyBloc({
+    required FlashcardRepository flashcardRepository,
+    SpacedRepetitionService? srService,
+  }) : _flashcardRepository = flashcardRepository,
+       _srService = srService ?? SpacedRepetitionService(),
+       super(StudyInitial()) {
     on<StartStudySession>(_onStartStudySession);
     on<FlipCard>(_onFlipCard);
     on<NextCard>(_onNextCard);
     on<PreviousCard>(_onPreviousCard);
     on<RestartSession>(_onRestartSession);
     on<MarkStarredInSession>(_onMarkStarredInSession);
+    on<RateCard>(_onRateCard);
+  }
+
+  /// Returns cards due now: new cards (nextReviewAt == null) or overdue cards.
+  /// Sorted so new cards come first, then oldest-due first.
+  List<Flashcard> _filterDue(List<Flashcard> cards) {
+    final now = DateTime.now();
+    return cards
+        .where((c) => c.nextReviewAt == null || !c.nextReviewAt!.isAfter(now))
+        .toList()
+      ..sort((a, b) {
+        if (a.nextReviewAt == null && b.nextReviewAt == null) return 0;
+        if (a.nextReviewAt == null) return -1;
+        if (b.nextReviewAt == null) return 1;
+        return a.nextReviewAt!.compareTo(b.nextReviewAt!);
+      });
   }
 
   /// Swaps front/back on every card when [flipped] is true.
@@ -24,15 +61,16 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
   }
 
   void _onStartStudySession(StartStudySession event, Emitter<StudyState> emit) {
-    if (event.flashcards.isEmpty) {
+    final due = _filterDue(event.flashcards);
+    if (due.isEmpty) {
       emit(StudyEmpty());
       return;
     }
-    _originalCards = List.from(event.flashcards);
+    _originalCards = List.from(due);
     _flipped = event.flipped;
     var cards = event.randomize
-        ? (List<Flashcard>.from(event.flashcards)..shuffle(Random()))
-        : List<Flashcard>.from(event.flashcards);
+        ? (List<Flashcard>.from(due)..shuffle(Random()))
+        : List<Flashcard>.from(due);
     cards = _applyFlip(cards, _flipped);
     emit(StudyInProgress(cards: cards, currentIndex: 0));
   }
@@ -93,6 +131,39 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       emit(
         current.copyWith(
           starredThisSession: {...current.starredThisSession, event.cardId},
+        ),
+      );
+    }
+  }
+
+  /// Applies SM-2 scheduling to the rated card, persists it, then advances.
+  ///
+  /// The card in session state may have its front/back swapped (flipped mode),
+  /// so we look up the original unswapped card from [_originalCards] by ID
+  /// before passing it to [SpacedRepetitionService].
+  Future<void> _onRateCard(RateCard event, Emitter<StudyState> emit) async {
+    if (state is! StudyInProgress) return;
+    final current = state as StudyInProgress;
+
+    final originalCard = _originalCards.firstWhere(
+      (c) => c.id == event.cardId,
+      orElse: () => current.currentCard,
+    );
+
+    final scheduled = _srService.schedule(originalCard, event.quality);
+    await _flashcardRepository.updateFlashcard(scheduled);
+
+    // Keep _originalCards in sync so RestartSession reflects new schedule data.
+    final idx = _originalCards.indexWhere((c) => c.id == event.cardId);
+    if (idx >= 0) _originalCards[idx] = scheduled;
+
+    if (current.isLast) {
+      emit(StudyComplete(current.totalCards));
+    } else {
+      emit(
+        current.copyWith(
+          currentIndex: current.currentIndex + 1,
+          showingFront: true,
         ),
       );
     }

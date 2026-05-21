@@ -43,3 +43,16 @@ class MarkStarredInSession extends StudyEvent {
   @override
   List<Object?> get props => [cardId];
 }
+
+/// User rated a card after seeing its back. Triggers SM-2 scheduling and
+/// persists the updated card, then advances to the next due card.
+///
+/// [quality] is the SM-2 quality value:
+///   0 = Again, 2 = Hard, 3 = Good, 5 = Easy.
+class RateCard extends StudyEvent {
+  final String cardId;
+  final int quality;
+  const RateCard({required this.cardId, required this.quality});
+  @override
+  List<Object?> get props => [cardId, quality];
+}

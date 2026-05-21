@@ -8,6 +8,7 @@ import '../../blocs/study/study_event.dart';
 import '../../blocs/study/study_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
+import '../../repositories/flashcard_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class StudyScreen extends StatelessWidget {
@@ -27,14 +28,15 @@ class StudyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => StudyBloc()
-        ..add(
-          StartStudySession(
-            flashcards: flashcards,
-            randomize: randomize,
-            flipped: flipped,
-          ),
-        ),
+      create: (context) =>
+          StudyBloc(flashcardRepository: context.read<FlashcardRepository>())
+            ..add(
+              StartStudySession(
+                flashcards: flashcards,
+                randomize: randomize,
+                flipped: flipped,
+              ),
+            ),
       child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
     );
   }
@@ -86,7 +88,34 @@ class _StudyView extends StatelessWidget {
       body: BlocBuilder<StudyBloc, StudyState>(
         builder: (context, state) {
           if (state is StudyEmpty) {
-            return const Center(child: Text('No cards to study.'));
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 64,
+                      color: Colors.green,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      "You're all caught up!",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'No cards are due for review right now.\nCome back later.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           if (state is StudyComplete) {
             return _CompletionView(
@@ -155,6 +184,7 @@ class _StudyCardViewState extends State<_StudyCardView>
   Widget build(BuildContext context) {
     final state = widget.state;
     final colorScheme = Theme.of(context).colorScheme;
+    final showingBack = !state.showingFront;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -208,37 +238,23 @@ class _StudyCardViewState extends State<_StudyCardView>
           ),
 
           const SizedBox(height: 8),
-          Text(
-            'Tap card to flip',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colorScheme.outline),
-          ),
-          const SizedBox(height: 24),
+          if (!showingBack)
+            Text(
+              'Tap card to flip',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.outline),
+            ),
+          const SizedBox(height: 16),
 
-          // Navigation
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              FilledButton.tonal(
-                onPressed: state.isFirst
-                    ? null
-                    : () => context.read<StudyBloc>().add(PreviousCard()),
-                child: const Row(
-                  children: [Icon(Icons.chevron_left), Text('Previous')],
-                ),
-              ),
-              FilledButton(
-                onPressed: () => context.read<StudyBloc>().add(NextCard()),
-                child: Row(
-                  children: [
-                    Text(state.isLast ? 'Finish' : 'Next'),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          // Rating buttons (shown after flip) or hint to flip
+          if (showingBack)
+            _RatingBar(cardId: state.currentCard.id)
+          else
+            const SizedBox(
+              height: 48,
+            ), // placeholder height to avoid layout jump
+
           const SizedBox(height: 16),
 
           // Star button — reads live star count from FlashcardBloc;
@@ -306,6 +322,82 @@ class _StudyCardViewState extends State<_StudyCardView>
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+}
+
+/// Four SM-2 rating buttons shown after the card back is revealed.
+/// Tapping a button dispatches [RateCard] which persists the new schedule
+/// and advances the session automatically.
+class _RatingBar extends StatelessWidget {
+  final String cardId;
+  const _RatingBar({required this.cardId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _RatingButton(
+          label: 'Again',
+          quality: 0,
+          cardId: cardId,
+          color: Theme.of(context).colorScheme.errorContainer,
+          labelColor: Theme.of(context).colorScheme.onErrorContainer,
+        ),
+        _RatingButton(
+          label: 'Hard',
+          quality: 2,
+          cardId: cardId,
+          color: const Color(0xFFFFE0B2), // amber-100
+          labelColor: const Color(0xFF6D4C41), // brown-700
+        ),
+        _RatingButton(
+          label: 'Good',
+          quality: 3,
+          cardId: cardId,
+          color: Theme.of(context).colorScheme.primaryContainer,
+          labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        ),
+        _RatingButton(
+          label: 'Easy',
+          quality: 5,
+          cardId: cardId,
+          color: const Color(0xFFC8E6C9), // green-100
+          labelColor: const Color(0xFF2E7D32), // green-800
+        ),
+      ],
+    );
+  }
+}
+
+class _RatingButton extends StatelessWidget {
+  final String label;
+  final int quality;
+  final String cardId;
+  final Color color;
+  final Color labelColor;
+
+  const _RatingButton({
+    required this.label,
+    required this.quality,
+    required this.cardId,
+    required this.color,
+    required this.labelColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.tonal(
+      onPressed: () => context.read<StudyBloc>().add(
+        RateCard(cardId: cardId, quality: quality),
+      ),
+      style: FilledButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: labelColor,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

@@ -8,7 +8,7 @@ part of 'deck.dart';
 
 class DeckAdapter extends TypeAdapter<Deck> {
   @override
-  final int typeId = 0;
+  final typeId = 0;
 
   @override
   Deck read(BinaryReader reader) {
@@ -19,7 +19,7 @@ class DeckAdapter extends TypeAdapter<Deck> {
     return Deck(
       id: fields[0] as String,
       name: fields[1] as String,
-      description: fields[2] as String,
+      description: fields[2] == null ? '' : fields[2] as String,
       createdAt: fields[3] as DateTime,
       updatedAt: fields[4] as DateTime,
     );
