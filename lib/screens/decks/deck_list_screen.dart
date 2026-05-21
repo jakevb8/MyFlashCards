@@ -6,88 +6,137 @@ import '../../blocs/analytics/analytics_bloc.dart';
 import '../../blocs/deck/deck_bloc.dart';
 import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
+import '../../blocs/import_export/import_export_bloc.dart';
+import '../../blocs/import_export/import_export_event.dart';
+import '../../blocs/import_export/import_export_state.dart';
 import '../../models/deck.dart';
 import '../../widgets/theme_picker_sheet.dart';
 import '../cards/flashcard_list_screen.dart';
 import 'deck_form_screen.dart';
+import 'import_export_dialogs.dart';
 
 class DeckListScreen extends StatelessWidget {
   const DeckListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Flashcard Decks'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart_outlined),
-            tooltip: 'Study Analytics',
-            onPressed: () => Navigator.pushNamed(context, '/analytics'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_awesome_outlined),
-            tooltip: 'Generate with AI',
-            onPressed: () => Navigator.pushNamed(context, '/generate'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.palette_outlined),
-            tooltip: 'Change Theme',
-            onPressed: () => ThemePickerSheet.show(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cloud_upload_outlined),
-            tooltip: 'Backup to Cloud',
-            onPressed: () => Navigator.pushNamed(context, '/backup'),
-          ),
-        ],
-      ),
-      body: BlocBuilder<DeckBloc, DeckState>(
-        builder: (context, state) {
-          if (state is DeckLoading) {
-            return const Center(child: CircularProgressIndicator());
+    // BlocListener handles import feedback and reloads the deck list on success.
+    return BlocListener<ImportExportBloc, ImportExportState>(
+      listener: (context, state) async {
+        if (state is ImportDuplicateDetected) {
+          final action = await showDuplicateDeckDialog(
+            context,
+            deckName: state.existingDeck.name,
+          );
+          if (!context.mounted) return;
+          switch (action) {
+            case ImportDuplicateAction.replace:
+              context.read<ImportExportBloc>().add(
+                ImportConfirmReplace(state.incoming),
+              );
+            case ImportDuplicateAction.merge:
+              context.read<ImportExportBloc>().add(
+                ImportConfirmMerge(
+                  bundle: state.incoming,
+                  existingDeck: state.existingDeck,
+                ),
+              );
+            case ImportDuplicateAction.cancel:
+              context.read<ImportExportBloc>().add(ImportCancelled());
           }
-          if (state is DeckError) {
-            return Center(child: Text('Error: ${state.message}'));
-          }
-          if (state is DeckLoaded) {
-            if (state.decks.isEmpty) {
-              return _EmptyState();
+        } else if (state is ImportExportSuccess) {
+          context.read<DeckBloc>().add(LoadDecks());
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is ImportExportError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Flashcard Decks'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.bar_chart_outlined),
+              tooltip: 'Study Analytics',
+              onPressed: () => Navigator.pushNamed(context, '/analytics'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Settings',
+              onPressed: () => Navigator.pushNamed(context, '/settings'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.auto_awesome_outlined),
+              tooltip: 'Generate with AI',
+              onPressed: () => Navigator.pushNamed(context, '/generate'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.palette_outlined),
+              tooltip: 'Change Theme',
+              onPressed: () => ThemePickerSheet.show(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.cloud_upload_outlined),
+              tooltip: 'Backup to Cloud',
+              onPressed: () => Navigator.pushNamed(context, '/backup'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.file_upload_outlined),
+              tooltip: 'Import Deck',
+              onPressed: () =>
+                  context.read<ImportExportBloc>().add(ImportDeckRequested()),
+            ),
+          ],
+        ),
+        body: BlocBuilder<DeckBloc, DeckState>(
+          builder: (context, state) {
+            if (state is DeckLoading) {
+              return const Center(child: CircularProgressIndicator());
             }
-            return Column(
-              children: [
-                _StreakBanner(),
-                _SwipeHintBanner(
-                  message: 'Swipe left on a deck to edit or delete',
-                ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: state.decks.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final deck = state.decks[index];
-                      return _DeckTile(deck: deck);
-                    },
+            if (state is DeckError) {
+              return Center(child: Text('Error: ${state.message}'));
+            }
+            if (state is DeckLoaded) {
+              if (state.decks.isEmpty) {
+                return _EmptyState();
+              }
+              return Column(
+                children: [
+                  _StreakBanner(),
+                  _SwipeHintBanner(
+                    message: 'Swipe left on a deck to edit or delete',
                   ),
-                ),
-              ],
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDeckSheet(context),
-        icon: const Icon(Icons.add),
-        label: const Text('New Deck'),
-      ),
-    );
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: state.decks.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final deck = state.decks[index];
+                        return _DeckTile(deck: deck);
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddDeckSheet(context),
+          icon: const Icon(Icons.add),
+          label: const Text('New Deck'),
+        ),
+      ), // Scaffold
+    ); // BlocListener
   }
 
   void _showAddDeckSheet(BuildContext context) {

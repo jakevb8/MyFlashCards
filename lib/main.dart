@@ -8,6 +8,7 @@ import 'blocs/analytics/analytics_event.dart';
 import 'blocs/deck/deck_bloc.dart';
 import 'blocs/deck/deck_event.dart';
 import 'blocs/flashcard/flashcard_bloc.dart';
+import 'blocs/import_export/import_export_bloc.dart';
 import 'blocs/theme/theme_bloc.dart';
 import 'blocs/theme/theme_state.dart';
 import 'core/theme/app_theme.dart';
@@ -23,6 +24,7 @@ import 'screens/decks/deck_list_screen.dart';
 import 'screens/backup/backup_screen.dart';
 import 'screens/generate/ai_generate_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'services/deck_import_export_service.dart';
 import 'services/firebase_backup_service.dart';
 
 // SharedPreferences key tracking when the last auto-backup ran.
@@ -62,6 +64,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
   late final DeckBloc _deckBloc;
   late final FlashcardBloc _flashcardBloc;
   late final AnalyticsBloc _analyticsBloc;
+  late final ImportExportBloc _importExportBloc;
 
   final _deckRepo = HiveDeckRepository();
   final _cardRepo = HiveFlashcardRepository();
@@ -76,6 +79,11 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     _flashcardBloc = FlashcardBloc(repository: _cardRepo);
     _analyticsBloc = AnalyticsBloc(sessionRepository: _sessionRepo)
       ..add(const LoadAnalytics());
+    _importExportBloc = ImportExportBloc(
+      deckRepository: _deckRepo,
+      flashcardRepository: _cardRepo,
+      service: DeckImportExportService(),
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -86,6 +94,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     _deckBloc.close();
     _flashcardBloc.close();
     _analyticsBloc.close();
+    _importExportBloc.close();
     super.dispose();
   }
 
@@ -143,6 +152,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
           BlocProvider.value(value: _deckBloc),
           BlocProvider.value(value: _flashcardBloc),
           BlocProvider.value(value: _analyticsBloc),
+          BlocProvider.value(value: _importExportBloc),
         ],
         child: BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {

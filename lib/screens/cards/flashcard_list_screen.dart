@@ -4,6 +4,9 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../blocs/flashcard/flashcard_bloc.dart';
 import '../../blocs/flashcard/flashcard_event.dart';
 import '../../blocs/flashcard/flashcard_state.dart';
+import '../../blocs/import_export/import_export_bloc.dart';
+import '../../blocs/import_export/import_export_event.dart';
+import '../../blocs/import_export/import_export_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../study/study_screen.dart';
@@ -29,86 +32,133 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(deck.name),
-        actions: [
-          BlocBuilder<FlashcardBloc, FlashcardState>(
-            builder: (context, state) {
-              if (state is FlashcardLoaded && state.flashcards.isNotEmpty) {
-                return IconButton(
-                  icon: const Icon(Icons.play_arrow_outlined),
-                  tooltip: 'Study',
-                  onPressed: () => _pickModeAndStudy(context, state.flashcards),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<FlashcardBloc, FlashcardState>(
-        builder: (context, state) {
-          if (state is FlashcardLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is FlashcardError) {
-            return Center(child: Text('Error: ${state.message}'));
-          }
-          if (state is FlashcardLoaded) {
-            if (state.flashcards.isEmpty) {
-              return _EmptyState(deck: deck);
-            }
-            final active = state.flashcards.where((c) => !c.archived).toList()
-              ..sort((a, b) => a.starCount.compareTo(b.starCount));
-            final archived = state.flashcards.where((c) => c.archived).toList();
-            return Column(
-              children: [
-                _SwipeHintBanner(
-                  message: 'Swipe left on a card to edit or delete',
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
+    // Show export success/error feedback as a SnackBar.
+    return BlocListener<ImportExportBloc, ImportExportState>(
+      listener: (context, state) {
+        if (state is ImportExportSuccess) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is ImportExportError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(deck.name),
+          actions: [
+            BlocBuilder<FlashcardBloc, FlashcardState>(
+              builder: (context, state) {
+                if (state is FlashcardLoaded && state.flashcards.isNotEmpty) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (final card in active)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _CardTile(card: card, deck: deck),
-                        ),
-                      if (archived.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        _ArchivedHeader(count: archived.length),
-                        const SizedBox(height: 8),
-                        for (final card in archived)
+                      IconButton(
+                        icon: const Icon(Icons.play_arrow_outlined),
+                        tooltip: 'Study',
+                        onPressed: () =>
+                            _pickModeAndStudy(context, state.flashcards),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.share_outlined),
+                        tooltip: 'Export Deck',
+                        onSelected: (format) =>
+                            context.read<ImportExportBloc>().add(
+                              ExportDeckRequested(
+                                deck: deck,
+                                cards: state.flashcards,
+                                format: format,
+                              ),
+                            ),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'json',
+                            child: Text('Export as JSON'),
+                          ),
+                          PopupMenuItem(
+                            value: 'csv',
+                            child: Text('Export as CSV'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<FlashcardBloc, FlashcardState>(
+          builder: (context, state) {
+            if (state is FlashcardLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is FlashcardError) {
+              return Center(child: Text('Error: ${state.message}'));
+            }
+            if (state is FlashcardLoaded) {
+              if (state.flashcards.isEmpty) {
+                return _EmptyState(deck: deck);
+              }
+              final active = state.flashcards.where((c) => !c.archived).toList()
+                ..sort((a, b) => a.starCount.compareTo(b.starCount));
+              final archived = state.flashcards
+                  .where((c) => c.archived)
+                  .toList();
+              return Column(
+                children: [
+                  _SwipeHintBanner(
+                    message: 'Swipe left on a card to edit or delete',
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        for (final card in active)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: _ArchivedCardTile(card: card, deck: deck),
+                            child: _CardTile(card: card, deck: deck),
                           ),
+                        if (archived.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          _ArchivedHeader(count: archived.length),
+                          const SizedBox(height: 8),
+                          for (final card in archived)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _ArchivedCardTile(card: card, deck: deck),
+                            ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<FlashcardBloc>(),
-              child: FlashcardFormScreen(deckId: deck.id),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<FlashcardBloc>(),
+                child: FlashcardFormScreen(deckId: deck.id),
+              ),
             ),
           ),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Card'),
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Card'),
-      ),
-    );
+      ), // Scaffold
+    ); // BlocListener
   }
 
   Future<void> _pickModeAndStudy(

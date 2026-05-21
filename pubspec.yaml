@@ -49,6 +49,11 @@ dependencies:
   # Uses iOS Keychain and Android EncryptedSharedPreferences under the hood.
   flutter_secure_storage: ^9.2.4
 
+  # Deck import/export: write files to temp dir (path_provider) then share
+  # via the platform share sheet (share_plus). file_picker handles inbound picks.
+  path_provider: ^2.1.4
+  share_plus: ^10.0.2
+
   # UI
   flutter_slidable: ^3.1.1
   google_fonts: ^6.2.1
