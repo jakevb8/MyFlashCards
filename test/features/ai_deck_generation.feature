@@ -110,3 +110,78 @@ Feature: AI Deck Generation
     When I tap "Generate Cards" with topic "Animals"
     Then I should see an error message
     And no deck should be created
+
+  # ── FEAT-002: Gemini API Key Settings ─────────────────────────────────────
+
+  Scenario: User with no key set sees prompt to add key in Settings
+    Given I am on the AI generation screen
+    And no Gemini API key has been saved in secure storage
+    When I tap "Generate Cards" with topic "Animals"
+    Then I should see a snackbar with the message "Add your Gemini API key in Settings first"
+    And the snackbar should contain a "Settings" action button
+    And no generation request should be made
+
+  Scenario: Tapping Settings action from no-key snackbar opens Settings screen
+    Given I am on the AI generation screen
+    And no Gemini API key has been saved
+    When I tap "Generate Cards"
+    And I tap the "Settings" action in the snackbar
+    Then I should be navigated to the Settings screen
+    And the Settings screen should show the "AI Settings" section
+
+  Scenario: User with key set can generate cards
+    Given a Gemini API key "AIzaSyFakeKeyForTestingPurposesOnly12" is saved in secure storage
+    And I am on the AI generation screen
+    When I tap "Generate Cards" with topic "Animals"
+    Then the generation request should be made using the stored key
+    And I should see the card preview
+
+  Scenario: Key survives app restart (loaded from secure storage on init)
+    Given a Gemini API key "AIzaSyFakeKeyForTestingPurposesOnly12" has been saved
+    When the AiGenerateScreen is initialised
+    Then GeminiKeyService.readKey() should be called
+    And the key should be loaded into state before the first user interaction
+    And the "Generate Cards" button should be functional without additional setup
+
+  Scenario: Saving a valid key in Settings updates the AI generate screen
+    Given I am on the Settings screen
+    And I tap "Edit API Key"
+    And I enter "AIzaSyFakeKeyForTestingPurposesOnly12" in the key field
+    And I tap "Save"
+    Then the key status tile should show "Key saved ✓"
+    And the bottom sheet should close automatically
+
+  Scenario: Saving an invalid key shows inline validation error
+    Given I am on the Settings screen
+    And I tap "Edit API Key"
+    And I enter "notavalidkey" in the key field
+    When I tap "Save"
+    Then an inline error should appear below the text field
+    And the key should not be written to secure storage
+    And the bottom sheet should remain open
+
+  Scenario: Clearing the key in Settings resets status to not set
+    Given a Gemini API key is saved
+    And I am on the Settings screen
+    When I tap "Edit API Key"
+    And I tap "Clear"
+    Then the key status tile should show "No key saved"
+    And GeminiKeyService.clearKey() should have been called
+
+  Scenario: Walkthrough is accessible from the key bottom sheet
+    Given I am on the Settings screen
+    And I tap "Edit API Key"
+    When I tap "How to get a key"
+    Then the Gemini Key Walkthrough screen should be pushed onto the navigator
+    And it should show 4 pages with a page indicator
+
+  Scenario: Walkthrough Skip button closes the walkthrough
+    Given I am on the Gemini Key Walkthrough screen
+    When I tap "Skip"
+    Then the walkthrough should be popped from the navigator
+
+  Scenario: Walkthrough Done button on last page closes the walkthrough
+    Given I am on the Gemini Key Walkthrough screen
+    And I have navigated to the last page
+    When I tap "Done"
+    Then the walkthrough should be popped from the navigator

@@ -1,3 +1,27 @@
+// ai_generate_screen.dart
+//
+// Screen that lets users generate flashcard decks from a topic prompt or an
+// uploaded text/markdown file using the Gemini AI model.
+//
+// WHY THIS EXISTS:
+//   Manually creating flashcards is time-consuming. This screen offloads the
+//   heavy lifting to Gemini, producing an editable preview the user can trim
+//   before saving — giving them quality control without the effort of authoring
+//   every card.
+//
+// API KEY LIFECYCLE (FEAT-002):
+//   The Gemini API key is no longer injected via --dart-define at build time.
+//   Instead, it is read at runtime from GeminiKeyService (which wraps
+//   FlutterSecureStorage) during initState. This means:
+//     - The key is user-supplied, not baked into the binary.
+//     - The app works without a rebuild when the user changes their key.
+//     - If no key is stored, the user is prompted to add one in Settings.
+//
+// SERVICE ARCHITECTURE:
+//   _service is typed as the abstract CardGeneratorService interface so we can
+//   swap in FirebaseFunctionGeneratorService (Blaze plan) without changing this
+//   screen. See lib/services/firebase_function_generator_service.dart.
+
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -11,19 +35,7 @@ import '../../blocs/flashcard/flashcard_event.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../../services/ai_deck_service.dart';
-
-// ---------------------------------------------------------------------------
-// API key is loaded from --dart-define=GEMINI_API_KEY=your_key at run time.
-// Get a free key at: https://aistudio.google.com/app/apikey
-//
-// When ready to release publicly, see:
-//   lib/services/firebase_function_generator_service.dart
-// for the one-line swap to use a Firebase Cloud Function instead.
-// ---------------------------------------------------------------------------
-const _kGeminiApiKey = String.fromEnvironment(
-  'GEMINI_API_KEY',
-  defaultValue: '',
-);
+import '../../services/gemini_key_service.dart';
 
 class AiGenerateScreen extends StatefulWidget {
   const AiGenerateScreen({super.key});
@@ -35,14 +47,20 @@ class AiGenerateScreen extends StatefulWidget {
 class _AiGenerateScreenState extends State<AiGenerateScreen> {
   // Typed as the abstract interface — swap to FirebaseFunctionGeneratorService
   // when upgrading to Blaze plan. See firebase_function_generator_service.dart.
-  final CardGeneratorService _service = GeminiDirectService(_kGeminiApiKey);
+  // Service is null until initState resolves the key from secure storage.
+  CardGeneratorService? _service;
+
+  // The API key loaded from secure storage. Null means no key has been saved.
+  String? _apiKey;
+
+  final _keyService = GeminiKeyService();
   final _topicController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _loading = false;
   String? _fileName;
   String? _fileText;
-  int _cardCount = 15; // user-adjustable (5–30)
+  int _cardCount = 15; // user-adjustable (1–100)
   bool _capitalise = true; // auto-capitalise first letter of each card side
 
   // "Add to existing deck" mode
@@ -50,6 +68,29 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
 
   // Once generated, cards are shown here for preview/editing
   List<_EditableCard> _suggestions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApiKey();
+  }
+
+  /// Reads the Gemini API key from secure storage and initialises the service.
+  ///
+  /// Called once on screen open and can be called again after the user returns
+  /// from Settings with a newly saved key (via the Settings SnackBar action).
+  Future<void> _loadApiKey() async {
+    final key = await _keyService.readKey();
+    if (!mounted) return;
+    setState(() {
+      _apiKey = key;
+      // Initialise the service eagerly when a key is available so the first
+      // generate tap does not incur additional latency.
+      _service = (key != null && key.isNotEmpty)
+          ? GeminiDirectService(key)
+          : null;
+    });
+  }
 
   @override
   void dispose() {
@@ -90,17 +131,36 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
     });
   }
 
+  // ── Key guard ────────────────────────────────────────────────────────────
+
+  /// Returns true if the API key is available and the service is ready.
+  ///
+  /// When no key is stored, shows a SnackBar with a Settings action so the
+  /// user can immediately navigate to add their key.
+  bool _ensureApiKey() {
+    if (_apiKey != null && _apiKey!.isNotEmpty && _service != null) return true;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Add your Gemini API key in Settings first'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Settings',
+          onPressed: () async {
+            await Navigator.pushNamed(context, '/settings');
+            // Re-read the key in case the user just saved one in Settings.
+            _loadApiKey();
+          },
+        ),
+      ),
+    );
+    return false;
+  }
+
   // ── Generation ───────────────────────────────────────────────────────────
 
   Future<void> _generate() async {
-    if (_kGeminiApiKey.isEmpty) {
-      _snack(
-        'No Gemini API key configured.\n'
-        'Run: flutter run --dart-define=GEMINI_API_KEY=your_key',
-        isError: true,
-      );
-      return;
-    }
+    if (!_ensureApiKey()) return;
     if (_fileText == null && !_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -109,8 +169,8 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
     });
     try {
       final cards = _fileText != null
-          ? await _service.generateFromText(_fileText!)
-          : await _service.generateFromTopic(
+          ? await _service!.generateFromText(_fileText!)
+          : await _service!.generateFromTopic(
               _topicController.text.trim(),
               count: _cardCount,
             );
@@ -129,13 +189,14 @@ class _AiGenerateScreenState extends State<AiGenerateScreen> {
 
   /// Fetches another batch and appends non-duplicate cards to the preview.
   Future<void> _loadMore() async {
-    if (_kGeminiApiKey.isEmpty || _fileText != null) return;
+    if (!_ensureApiKey()) return;
+    if (_fileText != null) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
       final existing = _suggestions.map((c) => c.front).toList();
-      final cards = await _service.generateFromTopic(
+      final cards = await _service!.generateFromTopic(
         _topicController.text.trim(),
         count: _cardCount,
         exclude: existing,
