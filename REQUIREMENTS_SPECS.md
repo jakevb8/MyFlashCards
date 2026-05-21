@@ -5,27 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-003] Spaced Repetition (SM-2)
-
-**Goal:** Replace the current random-shuffle study mode with the SM-2 spaced repetition algorithm so cards are scheduled based on how well the user knows them.
-
-**Why:** Spaced repetition is significantly more effective for long-term retention than random review. It's the core value-add over a simple flashcard app.
-
-**Scope:**
-- Add `ease_factor`, `interval_days`, `repetitions`, and `next_review_at` fields to the `Flashcard` model (Hive migration required)
-- `SpacedRepetitionService` in `lib/services/` implements SM-2: given a card + rating (0–5), returns updated scheduling fields
-- `StudyBloc` loads only cards due today (`next_review_at <= now`), ordered by due date
-- Study screen shows a rating bar (1–5 or Again/Hard/Good/Easy) after flipping a card
-- Persist updated scheduling fields to Hive (and Firestore if signed in)
-
-**Acceptance Criteria:**
-- [ ] Cards rated poorly are shown again sooner; cards rated well are deferred by days/weeks
-- [ ] Hive migration increments the type adapter version without data loss
-- [ ] Study session ends when all due cards are reviewed
-- [ ] `flutter test` passes including unit tests for `SpacedRepetitionService`
-
----
-
 ## [FEAT-004] Study Analytics & Streaks
 
 **Goal:** Show users their study streak, daily card count, and accuracy over time on a simple analytics screen.

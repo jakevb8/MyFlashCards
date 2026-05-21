@@ -9,7 +9,7 @@
 |----------|--------------------------------|-----------|----------|--------|
 | FEAT-001 | Google Sign-In                 | completed | P0       | 172c4c9 |
 | FEAT-002 | Gemini API Key Settings        | completed | P0       | 4835ab1 |
-| FEAT-003 | Spaced Repetition (SM-2)       | queued    | P1       |        |
+| FEAT-003 | Spaced Repetition (SM-2)       | completed | P1       | 9921f5a |
 | FEAT-004 | Study Analytics & Streaks      | queued    | P1       |        |
 | FEAT-005 | Multiple Study Modes           | queued    | P2       |        |
 | FEAT-006 | Deck Import / Export           | queued    | P2       |        |

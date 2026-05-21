@@ -2,6 +2,21 @@
 
 Completed feature specs are moved here from `REQUIREMENTS_SPECS.md` after their commit is pushed.
 
+## [FEAT-003] Spaced Repetition (SM-2) — completed 9921f5a
+
+SM-2 algorithm replaces random-shuffle study mode. `SpacedRepetitionService.schedule(card, 0–5)`
+returns an updated card copy with new `easeFactor`, `intervalDays`, `repetitions`, `nextReviewAt`.
+EF clamped to min 1.3; interval ladder: 1 → 6 → `round(interval * EF)`; failure resets to 1 day.
+`StudyBloc` now requires `FlashcardRepository` and `SpacedRepetitionService` (injectable);
+filters session to due cards on start; `RateCard` event persists SM-2 schedule via repository
+then auto-advances. Study screen shows Again/Hard/Good/Easy buttons after card flip; "You're all
+caught up!" empty state when no cards are due. Flashcard model gains 4 nullable HiveFields (8–11);
+old Hive records with missing fields read as null and treated as new cards.
+
+Files changed: `flashcard.dart`, `flashcard.g.dart`, `spaced_repetition_service.dart`,
+`study_bloc.dart`, `study_event.dart`, `study_screen.dart`, `study_bloc_test.dart`,
+`spaced_repetition_service_test.dart`, `feat_003_spaced_repetition.feature`.
+
 ## [FEAT-002] Gemini API Key Settings — completed 4835ab1
 
 `GeminiKeyService` wraps `FlutterSecureStorage` (injectable for tests). `SettingsBloc`
