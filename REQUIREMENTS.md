@@ -8,7 +8,7 @@
 | ID       | Title                          | Status    | Priority | Commit |
 |----------|--------------------------------|-----------|----------|--------|
 | FEAT-001 | Google Sign-In                 | completed | P0       | 172c4c9 |
-| FEAT-002 | Gemini API Key Settings        | queued    | P0       |        |
+| FEAT-002 | Gemini API Key Settings        | completed | P0       | 4835ab1 |
 | FEAT-003 | Spaced Repetition (SM-2)       | queued    | P1       |        |
 | FEAT-004 | Study Analytics & Streaks      | queued    | P1       |        |
 | FEAT-005 | Multiple Study Modes           | queued    | P2       |        |

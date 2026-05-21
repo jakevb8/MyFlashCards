@@ -2,6 +2,21 @@
 
 Completed feature specs are moved here from `REQUIREMENTS_SPECS.md` after their commit is pushed.
 
+## [FEAT-002] Gemini API Key Settings — completed 4835ab1
+
+`GeminiKeyService` wraps `FlutterSecureStorage` (injectable for tests). `SettingsBloc`
+with `GeminiKeyLoaded/Changed/Saved/Cleared` events; sentinel `copyWith` pattern to
+clear `errorMessage` explicitly. 4-step `GeminiKeyWalkthrough` PageView with
+`url_launcher` to AI Studio. Settings screen gains AI Settings section (first) with
+masked key display and bottom sheet editor; BLoC survives sheet open/close via
+`BlocProvider.value` at screen level. `AiGenerateScreen` drops `--dart-define`
+dependency; reads key from `GeminiKeyService` in `initState`; gates generation with
+actionable SnackBar. `flutter_secure_storage ^9.2.4` added.
+
+Files changed: `gemini_key_service.dart`, `settings_bloc/event/state.dart`,
+`gemini_key_walkthrough.dart`, `settings_screen.dart`, `ai_generate_screen.dart`,
+`pubspec.yaml`.
+
 ## [FEAT-001] Google Sign-In — completed 172c4c9
 
 `signInWithGoogle()` added to `FirebaseBackupService` — native Google account picker,
