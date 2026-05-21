@@ -84,3 +84,20 @@ DeckListScreen AppBar. Step 3 (remove anonymous auth) deferred to FEAT-001.
 
 Files changed: `account_deletion_service.dart`, `settings_screen.dart`,
 `privacy_policy_screen.dart`, `deck_list_screen.dart`, `main.dart`, `pubspec.yaml`.
+
+---
+
+## [FEAT-006] Deck Import / Export
+
+**Goal:** Let users export a deck as a CSV or JSON file and import decks from the same formats.
+
+**Why:** Enables users to create cards in spreadsheets, share decks with friends, or back up data independently of Firebase.
+
+**Scope:**
+- Export: `DeckImportExportService` serializes deck + cards to CSV or JSON; writes to temp dir; invokes platform share sheet via `share_plus`
+- Import: parse CSV/JSON via `file_picker` (`withData: true`); validate schema; create deck + cards in Hive
+- Handle duplicates: detect name clash, show Replace / Merge / Cancel dialog
+- Merge: keep existing deck record, add only cards with new IDs (rewrite `deckId`)
+- Replace: delete old deck + all its cards, then import fresh
+
+**Commit:** 688b64b

@@ -5,19 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-006] Deck Import / Export
-
-**Goal:** Let users export a deck as a CSV or JSON file and import decks from the same formats.
-
-**Why:** Enables users to create cards in spreadsheets, share decks with friends, or back up data independently of Firebase.
-
-**Scope:**
-- Export: `DeckExportService` serializes deck + cards to CSV (front, back, tags) or JSON
-- Import: parse CSV/JSON via `file_picker`, validate schema, create deck + cards in Hive
-- Handle duplicates: prompt user to merge or replace
-- `file_picker` is already in `pubspec.yaml`
-
----
 
 ## [FEAT-007] Deck Sharing via Link
 
