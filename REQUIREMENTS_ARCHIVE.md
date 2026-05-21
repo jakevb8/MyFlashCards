@@ -2,6 +2,16 @@
 
 Completed feature specs are moved here from `REQUIREMENTS_SPECS.md` after their commit is pushed.
 
+## [FEAT-005] Multiple Study Modes — completed 6988a83
+
+StudyMode enum (flashcard | multipleChoice | typeAnswer). Mode picker bottom sheet
+(StudyModePickerSheet) with shuffle/flip options replaces the three separate study
+buttons. StudyBloc generates MC choices (correct + up to 3 distractors from full deck)
+on start and every card advance. TypeAnswer view checks case-insensitive match;
+tolerant mode accepts answers within 2 edit-distance. Both modes auto-dispatch RateCard.
+
+---
+
 ## [FEAT-004] Study Analytics & Streaks — completed a216e50
 
 StudySession model (Hive typeId=2) persists date/cardsReviewed/correctCount per session.

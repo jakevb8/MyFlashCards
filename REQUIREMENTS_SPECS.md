@@ -5,20 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-005] Multiple Study Modes
-
-**Goal:** Offer three study modes — Flashcard Flip (current), Multiple Choice, and Type the Answer — selectable before starting a session.
-
-**Why:** Different study modes engage different recall pathways, improving retention. Multiple choice is lower friction for beginners.
-
-**Scope:**
-- Mode picker bottom sheet before `StudyScreen` launches
-- Multiple Choice: 4 options, 3 distractors drawn randomly from the same deck
-- Type the Answer: text field, case-insensitive exact match (with a "close enough" tolerance toggle)
-- All modes feed into the same SM-2 rating pipeline (FEAT-003 prerequisite)
-
----
-
 ## [FEAT-006] Deck Import / Export
 
 **Goal:** Let users export a deck as a CSV or JSON file and import decks from the same formats.
