@@ -2,6 +2,16 @@
 
 Completed feature specs are moved here from `REQUIREMENTS_SPECS.md` after their commit is pushed.
 
+## [FEAT-004] Study Analytics & Streaks — completed a216e50
+
+StudySession model (Hive typeId=2) persists date/cardsReviewed/correctCount per session.
+AnalyticsBloc computes streak (consecutive days from today or yesterday), accuracy (correctCount/total),
+and last7Days DailyCounts for bar chart. Analytics screen shows streak card, 7-day bar chart (no external
+charting dep), accuracy %, and total cards reviewed. Streak banner on deck list links to analytics screen.
+BlocListener in StudyScreen fires LoadAnalytics when StudyComplete.
+
+---
+
 ## [FEAT-003] Spaced Repetition (SM-2) — completed 9921f5a
 
 SM-2 algorithm replaces random-shuffle study mode. `SpacedRepetitionService.schedule(card, 0–5)`

@@ -5,25 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-004] Study Analytics & Streaks
-
-**Goal:** Show users their study streak, daily card count, and accuracy over time on a simple analytics screen.
-
-**Why:** Progress visibility is a primary motivator for consistent study habits.
-
-**Scope:**
-- `StudySession` model: date, cards reviewed, correct count
-- Persist sessions to Hive; sync to Firestore when signed in
-- Analytics screen: streak counter, 7-day bar chart (cards reviewed per day), accuracy percentage
-- Streak resets if user misses a day
-
-**Acceptance Criteria:**
-- [ ] Streak shown on deck list screen as a chip/badge
-- [ ] Analytics screen accessible from the top menu
-- [ ] Chart renders with no external charting dependency unless `fl_chart` is approved
-
----
-
 ## [FEAT-005] Multiple Study Modes
 
 **Goal:** Offer three study modes — Flashcard Flip (current), Multiple Choice, and Type the Answer — selectable before starting a session.
