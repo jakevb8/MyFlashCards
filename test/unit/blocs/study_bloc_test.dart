@@ -4,6 +4,7 @@ import 'package:my_flash_cards/blocs/study/study_bloc.dart';
 import 'package:my_flash_cards/blocs/study/study_event.dart';
 import 'package:my_flash_cards/blocs/study/study_state.dart';
 import 'package:my_flash_cards/models/flashcard.dart';
+import 'package:my_flash_cards/models/study_mode.dart';
 import 'package:my_flash_cards/models/study_session.dart';
 import 'package:my_flash_cards/repositories/flashcard_repository.dart';
 import 'package:my_flash_cards/repositories/study_session_repository.dart';
@@ -254,6 +255,122 @@ void main() {
       ),
       act: (bloc) => bloc.add(const RateCard(cardId: '1', quality: 5)),
       expect: () => [isA<StudyComplete>()],
+    );
+
+    // --- Multiple Choice mode ---
+
+    blocTest<StudyBloc, StudyState>(
+      'MC mode: StartStudySession populates choices for first card',
+      build: makeBloc,
+      act: (bloc) => bloc.add(
+        StartStudySession(
+          flashcards: makeCards(4),
+          mode: StudyMode.multipleChoice,
+        ),
+      ),
+      expect: () => [
+        isA<StudyInProgress>().having(
+          (s) => s.choices.isNotEmpty,
+          'has choices',
+          true,
+        ),
+      ],
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'MC mode: choices contain the correct answer',
+      build: makeBloc,
+      act: (bloc) => bloc.add(
+        StartStudySession(
+          flashcards: makeCards(4),
+          mode: StudyMode.multipleChoice,
+        ),
+      ),
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.choices, contains(s.currentCard.back));
+      },
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'MC mode: choices has at most 4 options',
+      build: makeBloc,
+      act: (bloc) => bloc.add(
+        StartStudySession(
+          flashcards: makeCards(4),
+          mode: StudyMode.multipleChoice,
+        ),
+      ),
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.choices.length, lessThanOrEqualTo(4));
+      },
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'MC mode: choices with only 1 card still contains the correct answer',
+      build: makeBloc,
+      act: (bloc) => bloc.add(
+        StartStudySession(
+          flashcards: makeCards(1),
+          mode: StudyMode.multipleChoice,
+        ),
+      ),
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.choices, contains(s.currentCard.back));
+      },
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'MC mode: RateCard advances and generates new choices for next card',
+      build: makeBloc,
+      act: (bloc) async {
+        bloc.add(
+          StartStudySession(
+            flashcards: makeCards(4),
+            mode: StudyMode.multipleChoice,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const RateCard(cardId: '0', quality: 5));
+      },
+      verify: (bloc) {
+        if (bloc.state is StudyInProgress) {
+          final s = bloc.state as StudyInProgress;
+          expect(s.currentIndex, 1);
+          expect(s.choices, contains(s.currentCard.back));
+        }
+      },
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'flashcard mode: choices is empty',
+      build: makeBloc,
+      act: (bloc) => bloc.add(StartStudySession(flashcards: makeCards(3))),
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.choices, isEmpty);
+        expect(s.mode, StudyMode.flashcard);
+      },
+    );
+
+    blocTest<StudyBloc, StudyState>(
+      'typeAnswer mode: choices is empty, tolerantMatching carried through',
+      build: makeBloc,
+      act: (bloc) => bloc.add(
+        StartStudySession(
+          flashcards: makeCards(2),
+          mode: StudyMode.typeAnswer,
+          tolerantMatching: true,
+        ),
+      ),
+      verify: (bloc) {
+        final s = bloc.state as StudyInProgress;
+        expect(s.choices, isEmpty);
+        expect(s.mode, StudyMode.typeAnswer);
+        expect(s.tolerantMatching, isTrue);
+      },
     );
   });
 }

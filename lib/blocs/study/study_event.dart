@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../models/flashcard.dart';
+import '../../models/study_mode.dart';
 
 abstract class StudyEvent extends Equatable {
   const StudyEvent();
@@ -7,17 +8,35 @@ abstract class StudyEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+/// Begins a new study session with the given cards.
+///
+/// [mode] controls how each card is presented. Defaults to [StudyMode.flashcard]
+/// so that all existing call sites continue to work without changes.
+/// [tolerantMatching] only affects [StudyMode.typeAnswer]: when true, answers
+/// within an edit-distance of 2 are also accepted as correct.
 class StartStudySession extends StudyEvent {
   final List<Flashcard> flashcards;
   final bool randomize;
   final bool flipped;
+  final StudyMode mode;
+  final bool tolerantMatching;
+
   const StartStudySession({
     required this.flashcards,
     this.randomize = false,
     this.flipped = false,
+    this.mode = StudyMode.flashcard,
+    this.tolerantMatching = false,
   });
+
   @override
-  List<Object?> get props => [flashcards, randomize, flipped];
+  List<Object?> get props => [
+    flashcards,
+    randomize,
+    flipped,
+    mode,
+    tolerantMatching,
+  ];
 }
 
 class FlipCard extends StudyEvent {}
@@ -26,6 +45,8 @@ class NextCard extends StudyEvent {}
 
 class PreviousCard extends StudyEvent {}
 
+/// Restarts the session with the same mode and tolerance as the current session.
+/// [flipped] and [randomize] can be changed per-restart (e.g. shuffle button).
 class RestartSession extends StudyEvent {
   final bool randomize;
   final bool flipped;
@@ -49,6 +70,9 @@ class MarkStarredInSession extends StudyEvent {
 ///
 /// [quality] is the SM-2 quality value:
 ///   0 = Again, 2 = Hard, 3 = Good, 5 = Easy.
+/// For non-flashcard modes the quality is set automatically by the view:
+///   multipleChoice correct → 5, wrong → 0
+///   typeAnswer correct → 4, wrong → 0
 class RateCard extends StudyEvent {
   final String cardId;
   final int quality;

@@ -8,6 +8,7 @@ import '../../blocs/study/study_event.dart';
 import '../../blocs/study/study_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
+import '../../models/study_mode.dart';
 import '../../blocs/analytics/analytics_bloc.dart';
 import '../../blocs/analytics/analytics_event.dart';
 import '../../repositories/flashcard_repository.dart';
@@ -19,6 +20,8 @@ class StudyScreen extends StatelessWidget {
   final List<Flashcard> flashcards;
   final bool randomize;
   final bool flipped;
+  final StudyMode mode;
+  final bool tolerantMatching;
 
   const StudyScreen({
     super.key,
@@ -26,6 +29,8 @@ class StudyScreen extends StatelessWidget {
     required this.flashcards,
     this.randomize = false,
     this.flipped = false,
+    this.mode = StudyMode.flashcard,
+    this.tolerantMatching = false,
   });
 
   @override
@@ -40,6 +45,8 @@ class StudyScreen extends StatelessWidget {
               flashcards: flashcards,
               randomize: randomize,
               flipped: flipped,
+              mode: mode,
+              tolerantMatching: tolerantMatching,
             ),
           ),
       // BlocListener refreshes analytics once the session completes so the
@@ -136,7 +143,17 @@ class _StudyView extends StatelessWidget {
             );
           }
           if (state is StudyInProgress) {
-            return _StudyCardView(state: state);
+            return switch (state.mode) {
+              StudyMode.flashcard => _StudyCardView(state: state),
+              StudyMode.multipleChoice => _MultipleChoiceCardView(
+                key: ValueKey(state.currentIndex),
+                state: state,
+              ),
+              StudyMode.typeAnswer => _TypeAnswerCardView(
+                key: ValueKey(state.currentIndex),
+                state: state,
+              ),
+            };
           }
           return const Center(child: CircularProgressIndicator());
         },
@@ -144,6 +161,10 @@ class _StudyView extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Flashcard flip mode (original)
+// ---------------------------------------------------------------------------
 
 class _StudyCardView extends StatefulWidget {
   final StudyInProgress state;
@@ -281,7 +302,6 @@ class _StudyCardViewState extends State<_StudyCardView>
 
               return BlocBuilder<FlashcardBloc, FlashcardState>(
                 builder: (context, cardState) {
-                  // Find the live version of this card so star count stays fresh.
                   Flashcard? live;
                   if (cardState is FlashcardLoaded) {
                     try {
@@ -338,6 +358,377 @@ class _StudyCardViewState extends State<_StudyCardView>
   }
 }
 
+// ---------------------------------------------------------------------------
+// Multiple choice mode
+// ---------------------------------------------------------------------------
+
+class _MultipleChoiceCardView extends StatefulWidget {
+  final StudyInProgress state;
+  const _MultipleChoiceCardView({super.key, required this.state});
+
+  @override
+  State<_MultipleChoiceCardView> createState() =>
+      _MultipleChoiceCardViewState();
+}
+
+class _MultipleChoiceCardViewState extends State<_MultipleChoiceCardView> {
+  String? _selected;
+
+  bool get _answered => _selected != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          LinearProgressIndicator(
+            value: (state.currentIndex + 1) / state.totalCards,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${state.currentIndex + 1} / ${state.totalCards}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 24),
+
+          // Question card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              state.currentCard.front,
+              style: TextStyle(
+                color: cs.onPrimaryContainer,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Answer options
+          ...state.choices.map((choice) {
+            final isCorrect = choice == state.currentCard.back;
+            final isSelected = choice == _selected;
+            Color bgColor;
+            Color fgColor;
+            if (!_answered) {
+              bgColor = cs.surfaceContainerHigh;
+              fgColor = cs.onSurface;
+            } else if (isCorrect) {
+              bgColor = const Color(0xFFC8E6C9); // green-100
+              fgColor = const Color(0xFF1B5E20); // green-900
+            } else if (isSelected) {
+              bgColor = cs.errorContainer;
+              fgColor = cs.onErrorContainer;
+            } else {
+              bgColor = cs.surfaceContainerHigh;
+              fgColor = cs.onSurface.withValues(alpha: 0.4);
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonal(
+                  onPressed: _answered
+                      ? null
+                      : () {
+                          setState(() => _selected = choice);
+                          // Capture the bloc reference before the async gap to
+                          // satisfy use_build_context_synchronously.
+                          final bloc = context.read<StudyBloc>();
+                          // Auto-rate and advance after a brief pause so the
+                          // user can see the correct/incorrect feedback.
+                          Future.delayed(const Duration(milliseconds: 900), () {
+                            if (mounted) {
+                              bloc.add(
+                                RateCard(
+                                  cardId: state.currentCard.id,
+                                  quality: isCorrect ? 5 : 0,
+                                ),
+                              );
+                            }
+                          });
+                        },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: bgColor,
+                    foregroundColor: fgColor,
+                    disabledBackgroundColor: bgColor,
+                    disabledForegroundColor: fgColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 20,
+                    ),
+                    alignment: Alignment.centerLeft,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          choice,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      if (_answered && isCorrect)
+                        const Icon(Icons.check_circle, size: 20)
+                      else if (_answered && isSelected && !isCorrect)
+                        const Icon(Icons.cancel, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Type-the-answer mode
+// ---------------------------------------------------------------------------
+
+// Levenshtein edit distance for tolerant answer matching.
+int _editDistance(String a, String b) {
+  if (a == b) return 0;
+  final m = a.length, n = b.length;
+  final dp = List.generate(m + 1, (i) => List.filled(n + 1, 0));
+  for (var i = 0; i <= m; i++) {
+    dp[i][0] = i;
+  }
+  for (var j = 0; j <= n; j++) {
+    dp[0][j] = j;
+  }
+  for (var i = 1; i <= m; i++) {
+    for (var j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] == b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + [dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]].reduce(min);
+    }
+  }
+  return dp[m][n];
+}
+
+/// Returns true when [answer] matches [correct] (case-insensitive trim).
+/// With [tolerant] = true, also accepts answers within 2 edit-distance for
+/// answers longer than 4 characters.
+bool _isAnswerCorrect(String answer, String correct, {required bool tolerant}) {
+  final a = answer.trim().toLowerCase();
+  final c = correct.trim().toLowerCase();
+  if (a == c) return true;
+  if (!tolerant) return false;
+  return c.length > 4 && _editDistance(a, c) <= 2;
+}
+
+class _TypeAnswerCardView extends StatefulWidget {
+  final StudyInProgress state;
+  const _TypeAnswerCardView({super.key, required this.state});
+
+  @override
+  State<_TypeAnswerCardView> createState() => _TypeAnswerCardViewState();
+}
+
+class _TypeAnswerCardViewState extends State<_TypeAnswerCardView> {
+  final _controller = TextEditingController();
+  bool? _correct; // null = not yet submitted
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final correct = _isAnswerCorrect(
+      _controller.text,
+      widget.state.currentCard.back,
+      tolerant: widget.state.tolerantMatching,
+    );
+    setState(() => _correct = correct);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final cs = Theme.of(context).colorScheme;
+    final submitted = _correct != null;
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          LinearProgressIndicator(
+            value: (state.currentIndex + 1) / state.totalCards,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${state.currentIndex + 1} / ${state.totalCards}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 24),
+
+          // Question card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              state.currentCard.front,
+              style: TextStyle(
+                color: cs.onPrimaryContainer,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Answer field + check button (hidden after submission)
+          if (!submitted) ...[
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: 'Type your answer…',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _controller.text.isNotEmpty ? _submit : null,
+                icon: const Icon(Icons.check),
+                label: const Text('Check'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+
+          // Feedback after submission
+          if (submitted) ...[
+            // Show what the user typed
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _correct! ? const Color(0xFFC8E6C9) : cs.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        _correct! ? Icons.check_circle : Icons.cancel,
+                        color: _correct!
+                            ? const Color(0xFF1B5E20)
+                            : cs.onErrorContainer,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _correct! ? 'Correct!' : 'Incorrect',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _correct!
+                              ? const Color(0xFF1B5E20)
+                              : cs.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (!_correct!) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your answer: ${_controller.text.trim()}',
+                      style: TextStyle(color: cs.onErrorContainer),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Correct answer: ${state.currentCard.back}',
+                      style: TextStyle(
+                        color: cs.onErrorContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.read<StudyBloc>().add(
+                  RateCard(
+                    cardId: state.currentCard.id,
+                    quality: _correct! ? 4 : 0,
+                  ),
+                ),
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text('Continue'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared widgets
+// ---------------------------------------------------------------------------
+
 /// Four SM-2 rating buttons shown after the card back is revealed.
 /// Tapping a button dispatches [RateCard] which persists the new schedule
 /// and advances the session automatically.
@@ -361,8 +752,8 @@ class _RatingBar extends StatelessWidget {
           label: 'Hard',
           quality: 2,
           cardId: cardId,
-          color: const Color(0xFFFFE0B2), // amber-100
-          labelColor: const Color(0xFF6D4C41), // brown-700
+          color: const Color(0xFFFFE0B2),
+          labelColor: const Color(0xFF6D4C41),
         ),
         _RatingButton(
           label: 'Good',
@@ -375,8 +766,8 @@ class _RatingBar extends StatelessWidget {
           label: 'Easy',
           quality: 5,
           cardId: cardId,
-          color: const Color(0xFFC8E6C9), // green-100
-          labelColor: const Color(0xFF2E7D32), // green-800
+          color: const Color(0xFFC8E6C9),
+          labelColor: const Color(0xFF2E7D32),
         ),
       ],
     );
@@ -444,7 +835,6 @@ class _CardFace extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Small dot — subtle side indicator without any text label
           Container(
             width: 8,
             height: 8,

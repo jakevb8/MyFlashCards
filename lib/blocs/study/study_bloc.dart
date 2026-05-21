@@ -3,6 +3,8 @@
 // Responsibilities:
 //   - Filters the provided card list to only those due today (SM-2 scheduling).
 //   - Drives the flip animation state machine (showingFront).
+//   - Generates multiple-choice answer options (correct + distractors) for
+//     StudyMode.multipleChoice, refreshed on every card advance.
 //   - Handles SM-2 ratings: computes new schedule via SpacedRepetitionService,
 //     persists to Hive via FlashcardRepository, then advances the session.
 //   - Records a StudySession on completion so AnalyticsBloc can compute
@@ -15,6 +17,7 @@ import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/flashcard.dart';
+import '../../models/study_mode.dart';
 import '../../models/study_session.dart';
 import '../../repositories/flashcard_repository.dart';
 import '../../repositories/study_session_repository.dart';
@@ -30,9 +33,13 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
 
   List<Flashcard> _originalCards = [];
   bool _flipped = false;
-
-  // Tracks correct ratings within the current session for analytics recording.
+  StudyMode _mode = StudyMode.flashcard;
+  bool _tolerantMatching = false;
   int _sessionCorrectCount = 0;
+
+  // All non-archived deck cards (flipped as needed) used as the MC distractor pool.
+  // Wider than _originalCards which only holds today's due cards.
+  List<Flashcard> _allCardsFlipped = [];
 
   StudyBloc({
     required FlashcardRepository flashcardRepository,
@@ -74,6 +81,25 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     return cards.map((c) => c.copyWith(front: c.back, back: c.front)).toList();
   }
 
+  /// Generates MC answer choices for [card]: the correct answer plus up to 3
+  /// distractors drawn from [pool]. Returns an empty list for non-MC modes.
+  ///
+  /// The pool should already have front/back swapped for flipped sessions so
+  /// that [card.back] is always the correct answer regardless of flip state.
+  List<String> _generateChoices(Flashcard card, List<Flashcard> pool) {
+    if (_mode != StudyMode.multipleChoice) return const [];
+    final correct = card.back;
+    final distractors =
+        pool
+            .where((c) => c.id != card.id)
+            .map((c) => c.back)
+            .where((s) => s.trim().isNotEmpty && s != correct)
+            .toSet()
+            .toList()
+          ..shuffle(Random());
+    return [correct, ...distractors.take(3)]..shuffle(Random());
+  }
+
   void _onStartStudySession(StartStudySession event, Emitter<StudyState> emit) {
     final due = _filterDue(event.flashcards);
     if (due.isEmpty) {
@@ -82,12 +108,28 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     }
     _originalCards = List.from(due);
     _flipped = event.flipped;
+    _mode = event.mode;
+    _tolerantMatching = event.tolerantMatching;
     _sessionCorrectCount = 0;
+
+    // Build the distractor pool from all provided cards so MC has plenty of
+    // options even when only a few cards are due today.
+    _allCardsFlipped = _applyFlip(List.from(event.flashcards), _flipped);
+
     var cards = event.randomize
         ? (List<Flashcard>.from(due)..shuffle(Random()))
         : List<Flashcard>.from(due);
     cards = _applyFlip(cards, _flipped);
-    emit(StudyInProgress(cards: cards, currentIndex: 0));
+
+    emit(
+      StudyInProgress(
+        cards: cards,
+        currentIndex: 0,
+        mode: _mode,
+        choices: _generateChoices(cards.first, _allCardsFlipped),
+        tolerantMatching: _tolerantMatching,
+      ),
+    );
   }
 
   void _onFlipCard(FlipCard event, Emitter<StudyState> emit) {
@@ -103,10 +145,15 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       if (current.isLast) {
         emit(StudyComplete(current.totalCards));
       } else {
+        final nextIndex = current.currentIndex + 1;
         emit(
           current.copyWith(
-            currentIndex: current.currentIndex + 1,
+            currentIndex: nextIndex,
             showingFront: true,
+            choices: _generateChoices(
+              current.cards[nextIndex],
+              _allCardsFlipped,
+            ),
           ),
         );
       }
@@ -117,10 +164,15 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     if (state is StudyInProgress) {
       final current = state as StudyInProgress;
       if (!current.isFirst) {
+        final prevIndex = current.currentIndex - 1;
         emit(
           current.copyWith(
-            currentIndex: current.currentIndex - 1,
+            currentIndex: prevIndex,
             showingFront: true,
+            choices: _generateChoices(
+              current.cards[prevIndex],
+              _allCardsFlipped,
+            ),
           ),
         );
       }
@@ -135,7 +187,17 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
         ? (List<Flashcard>.from(_originalCards)..shuffle(Random()))
         : List<Flashcard>.from(_originalCards);
     cards = _applyFlip(cards, _flipped);
-    emit(StudyInProgress(cards: cards, currentIndex: 0));
+    // Rebuild distractor pool with the (possibly new) flip orientation.
+    _allCardsFlipped = _applyFlip(List.from(_originalCards), _flipped);
+    emit(
+      StudyInProgress(
+        cards: cards,
+        currentIndex: 0,
+        mode: _mode,
+        choices: _generateChoices(cards.first, _allCardsFlipped),
+        tolerantMatching: _tolerantMatching,
+      ),
+    );
   }
 
   void _onMarkStarredInSession(
@@ -182,10 +244,12 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       await _persistSession(current.totalCards);
       emit(StudyComplete(current.totalCards));
     } else {
+      final nextIndex = current.currentIndex + 1;
       emit(
         current.copyWith(
-          currentIndex: current.currentIndex + 1,
+          currentIndex: nextIndex,
           showingFront: true,
+          choices: _generateChoices(current.cards[nextIndex], _allCardsFlipped),
         ),
       );
     }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../models/flashcard.dart';
+import '../../models/study_mode.dart';
 
 abstract class StudyState extends Equatable {
   const StudyState();
@@ -17,11 +18,25 @@ class StudyInProgress extends StudyState {
   /// IDs of cards that have been starred during this session (one per card).
   final Set<String> starredThisSession;
 
+  /// The active study mode for this session.
+  final StudyMode mode;
+
+  /// Multiple-choice answer options for the current card (correct + distractors),
+  /// pre-shuffled. Empty for [StudyMode.flashcard] and [StudyMode.typeAnswer].
+  final List<String> choices;
+
+  /// When true, the type-answer checker accepts answers within 2 edit-distance.
+  /// Ignored for modes other than [StudyMode.typeAnswer].
+  final bool tolerantMatching;
+
   const StudyInProgress({
     required this.cards,
     required this.currentIndex,
     this.showingFront = true,
     this.starredThisSession = const {},
+    this.mode = StudyMode.flashcard,
+    this.choices = const [],
+    this.tolerantMatching = false,
   });
 
   Flashcard get currentCard => cards[currentIndex];
@@ -37,12 +52,18 @@ class StudyInProgress extends StudyState {
     int? currentIndex,
     bool? showingFront,
     Set<String>? starredThisSession,
+    StudyMode? mode,
+    List<String>? choices,
+    bool? tolerantMatching,
   }) {
     return StudyInProgress(
       cards: cards ?? this.cards,
       currentIndex: currentIndex ?? this.currentIndex,
       showingFront: showingFront ?? this.showingFront,
       starredThisSession: starredThisSession ?? this.starredThisSession,
+      mode: mode ?? this.mode,
+      choices: choices ?? this.choices,
+      tolerantMatching: tolerantMatching ?? this.tolerantMatching,
     );
   }
 
@@ -52,6 +73,9 @@ class StudyInProgress extends StudyState {
     currentIndex,
     showingFront,
     starredThisSession,
+    mode,
+    choices,
+    tolerantMatching,
   ];
 }
 

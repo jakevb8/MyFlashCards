@@ -7,6 +7,7 @@ import '../../blocs/flashcard/flashcard_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../study/study_screen.dart';
+import '../study/study_mode_picker_sheet.dart';
 import 'flashcard_form_screen.dart';
 
 class FlashcardListScreen extends StatefulWidget {
@@ -35,37 +36,10 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
           BlocBuilder<FlashcardBloc, FlashcardState>(
             builder: (context, state) {
               if (state is FlashcardLoaded && state.flashcards.isNotEmpty) {
-                return Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.play_arrow_outlined),
-                      tooltip: 'Study In Order',
-                      onPressed: () => _startStudy(
-                        context,
-                        state.flashcards,
-                        randomize: false,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.shuffle),
-                      tooltip: 'Study Randomized',
-                      onPressed: () => _startStudy(
-                        context,
-                        state.flashcards,
-                        randomize: true,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.flip_camera_android_outlined),
-                      tooltip: 'Study Flipped (back→front)',
-                      onPressed: () => _startStudy(
-                        context,
-                        state.flashcards,
-                        randomize: false,
-                        flipped: true,
-                      ),
-                    ),
-                  ],
+                return IconButton(
+                  icon: const Icon(Icons.play_arrow_outlined),
+                  tooltip: 'Study',
+                  onPressed: () => _pickModeAndStudy(context, state.flashcards),
                 );
               }
               return const SizedBox.shrink();
@@ -137,22 +111,24 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
     );
   }
 
-  void _startStudy(
+  Future<void> _pickModeAndStudy(
     BuildContext context,
-    List<Flashcard> cards, {
-    required bool randomize,
-    bool flipped = false,
-  }) {
+    List<Flashcard> cards,
+  ) async {
     // Exclude archived cards from study sessions.
     final studyCards = cards.where((c) => !c.archived).toList();
+    final selection = await StudyModePickerSheet.show(context);
+    if (selection == null || !context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => StudyScreen(
           deck: deck,
           flashcards: studyCards,
-          randomize: randomize,
-          flipped: flipped,
+          randomize: selection.randomize,
+          flipped: selection.flipped,
+          mode: selection.mode,
+          tolerantMatching: selection.tolerantMatching,
         ),
       ),
     );
