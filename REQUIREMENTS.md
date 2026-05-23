@@ -13,6 +13,6 @@
 | FEAT-004 | Study Analytics & Streaks      | completed | P1       | a216e50 |
 | FEAT-005 | Multiple Study Modes           | completed | P2       | 6988a83 |
 | FEAT-006 | Deck Import / Export           | completed | P2       | 688b64b |
-| FEAT-007 | Deck Sharing via Link          | queued    | P3       |        |
+| FEAT-007 | Deck Sharing via Link          | completed | P3       | b8ac09a |
 | FEAT-008 | Backup V2                      | completed | P1       | 5e40f58 |
 | FEAT-009 | Privacy & Account Management   | completed | P1       | 67e16bd |

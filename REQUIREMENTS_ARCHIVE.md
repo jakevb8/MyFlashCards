@@ -101,3 +101,23 @@ Files changed: `account_deletion_service.dart`, `settings_screen.dart`,
 - Replace: delete old deck + all its cards, then import fresh
 
 **Commit:** 688b64b
+
+---
+
+## [FEAT-007] Deck Sharing via Link — completed b8ac09a
+
+`DeckSharingService` publishes deck+cards JSON to `/shared_decks/{shareId}` (Firestore)
+with a 7-day TTL (enforced at read time). Deep-link format: `myflashcards://deck/{shareId}`.
+`DeckSharingBloc` manages the sender state machine. Share action added to the deck tile
+swipe menu (`DeckListScreen`) and to the flashcard list AppBar `PopupMenuButton`.
+`ShareDeckDialog` bottom sheet shows a progress indicator, copyable link, and system
+share button. `AppLinks` listener in `main.dart` handles both cold-start and warm-start
+deep links, dispatching `ImportSharedDeckRequested` to `ImportExportBloc` (which reuses
+the existing duplicate-detection state machine). SM-2 progress stripped on import;
+fresh UUIDs assigned so receiver's copy is independent of sender's.
+
+Files changed: `deck_sharing_service.dart` (new), `deck_sharing_bloc/` (new),
+`share_deck_dialog.dart` (new), `deck_import_export_service.dart`, `import_export_bloc.dart`,
+`import_export_event.dart`, `deck_list_screen.dart`, `flashcard_list_screen.dart`,
+`main.dart`, `AndroidManifest.xml`, `Info.plist`, `firestore.rules`,
+`feat_007_deck_sharing.feature` (new), `widget_test.dart`.
