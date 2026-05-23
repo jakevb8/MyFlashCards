@@ -2,7 +2,7 @@
 //
 // Import lifecycle:
 //   ImportExportIdle
-//     → ImportExportInProgress  (file picker opens)
+//     → ImportExportInProgress  (file picker opens or shared deck fetch starts)
 //     → ImportExportIdle         (user cancelled picker)
 //     → ImportDuplicateDetected  (name clash; widget shows dialog)
 //       → ImportExportInProgress (user chose action)
@@ -19,12 +19,18 @@
 // FlashcardListScreen can access it. DeckListScreen's BlocListener is
 // responsible for calling DeckBloc.add(LoadDecks()) after a successful import
 // because this bloc intentionally has no reference to DeckBloc.
+//
+// ImportSharedDeckRequested flows through the same duplicate-detection machine.
+// SM-2 progress is stripped from the received cards so the importer starts fresh.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/deck.dart';
+import '../../models/flashcard.dart';
 import '../../repositories/deck_repository.dart';
 import '../../repositories/flashcard_repository.dart';
 import '../../services/deck_import_export_service.dart';
+import '../../services/deck_sharing_service.dart';
 import 'import_export_event.dart';
 import 'import_export_state.dart';
 
@@ -32,20 +38,24 @@ class ImportExportBloc extends Bloc<ImportExportEvent, ImportExportState> {
   final DeckRepository _deckRepository;
   final FlashcardRepository _flashcardRepository;
   final DeckImportExportService _service;
+  final DeckSharingService? _sharingService;
 
   ImportExportBloc({
     required DeckRepository deckRepository,
     required FlashcardRepository flashcardRepository,
     required DeckImportExportService service,
+    DeckSharingService? sharingService,
   }) : _deckRepository = deckRepository,
        _flashcardRepository = flashcardRepository,
        _service = service,
+       _sharingService = sharingService,
        super(ImportExportIdle()) {
     on<ImportDeckRequested>(_onImportRequested);
     on<ImportConfirmReplace>(_onConfirmReplace);
     on<ImportConfirmMerge>(_onConfirmMerge);
     on<ImportCancelled>(_onCancelled);
     on<ExportDeckRequested>(_onExportRequested);
+    on<ImportSharedDeckRequested>(_onImportSharedRequested);
   }
 
   /// Opens the file picker, parses the selected file, then either commits the
@@ -161,6 +171,71 @@ class ImportExportBloc extends Bloc<ImportExportEvent, ImportExportState> {
       emit(ImportExportIdle());
     } catch (e) {
       emit(ImportExportError('Export failed: $e'));
+      emit(ImportExportIdle());
+    }
+  }
+
+  /// Fetches the shared deck from Firestore and runs the standard import flow.
+  ///
+  /// SM-2 progress (easeFactor, intervalDays, repetitions, nextReviewAt) is
+  /// stripped from each card so the receiver starts with a clean slate.
+  /// New UUIDs are assigned to both the deck and all cards to avoid ID
+  /// collisions if the same share link is imported more than once.
+  Future<void> _onImportSharedRequested(
+    ImportSharedDeckRequested event,
+    Emitter<ImportExportState> emit,
+  ) async {
+    if (_sharingService == null) {
+      emit(const ImportExportError('Sharing service not available.'));
+      emit(ImportExportIdle());
+      return;
+    }
+
+    emit(ImportExportInProgress());
+    try {
+      final raw = await _sharingService.fetchSharedDeck(event.shareId);
+
+      // Assign fresh IDs so the receiver's copy is independent of the sender's.
+      const uuid = Uuid();
+      final newDeckId = uuid.v4();
+      final freshDeck = Deck(
+        id: newDeckId,
+        name: raw.deck.name,
+        description: raw.deck.description,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Strip SM-2 progress — receiver starts each card as unseen.
+      final freshCards = raw.cards.map((c) {
+        return Flashcard(
+          id: uuid.v4(),
+          deckId: newDeckId,
+          front: c.front,
+          back: c.back,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          starCount: 0,
+          archived: false,
+          // easeFactor, intervalDays, repetitions, nextReviewAt intentionally omitted
+        );
+      }).toList();
+
+      final bundle = DeckImportExportBundle(deck: freshDeck, cards: freshCards);
+
+      final decks = await _deckRepository.getDecks();
+      final existing = _findByName(decks, bundle.deck.name);
+
+      if (existing != null) {
+        emit(ImportDuplicateDetected(incoming: bundle, existingDeck: existing));
+      } else {
+        await _commitImport(bundle, emit);
+      }
+    } on DeckSharingException catch (e) {
+      emit(ImportExportError(e.message));
+      emit(ImportExportIdle());
+    } catch (e) {
+      emit(ImportExportError('Could not import shared deck: $e'));
       emit(ImportExportIdle());
     }
   }

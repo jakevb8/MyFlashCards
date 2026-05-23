@@ -6,58 +6,79 @@ import '../../blocs/analytics/analytics_bloc.dart';
 import '../../blocs/deck/deck_bloc.dart';
 import '../../blocs/deck/deck_event.dart';
 import '../../blocs/deck/deck_state.dart';
+import '../../blocs/deck_sharing/deck_sharing_bloc.dart';
+import '../../blocs/deck_sharing/deck_sharing_state.dart';
 import '../../blocs/import_export/import_export_bloc.dart';
 import '../../blocs/import_export/import_export_event.dart';
 import '../../blocs/import_export/import_export_state.dart';
 import '../../models/deck.dart';
+import '../../repositories/hive_flashcard_repository.dart';
 import '../../widgets/theme_picker_sheet.dart';
 import '../cards/flashcard_list_screen.dart';
 import 'deck_form_screen.dart';
 import 'import_export_dialogs.dart';
+import 'share_deck_dialog.dart';
 
 class DeckListScreen extends StatelessWidget {
   const DeckListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // BlocListener handles import feedback and reloads the deck list on success.
-    return BlocListener<ImportExportBloc, ImportExportState>(
-      listener: (context, state) async {
-        if (state is ImportDuplicateDetected) {
-          final action = await showDuplicateDeckDialog(
-            context,
-            deckName: state.existingDeck.name,
-          );
-          if (!context.mounted) return;
-          switch (action) {
-            case ImportDuplicateAction.replace:
-              context.read<ImportExportBloc>().add(
-                ImportConfirmReplace(state.incoming),
+    // MultiBlocListener handles import feedback (and reloads deck list on
+    // success) plus sharing errors from DeckSharingBloc.
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ImportExportBloc, ImportExportState>(
+          listener: (context, state) async {
+            if (state is ImportDuplicateDetected) {
+              final action = await showDuplicateDeckDialog(
+                context,
+                deckName: state.existingDeck.name,
               );
-            case ImportDuplicateAction.merge:
-              context.read<ImportExportBloc>().add(
-                ImportConfirmMerge(
-                  bundle: state.incoming,
-                  existingDeck: state.existingDeck,
+              if (!context.mounted) return;
+              switch (action) {
+                case ImportDuplicateAction.replace:
+                  context.read<ImportExportBloc>().add(
+                    ImportConfirmReplace(state.incoming),
+                  );
+                case ImportDuplicateAction.merge:
+                  context.read<ImportExportBloc>().add(
+                    ImportConfirmMerge(
+                      bundle: state.incoming,
+                      existingDeck: state.existingDeck,
+                    ),
+                  );
+                case ImportDuplicateAction.cancel:
+                  context.read<ImportExportBloc>().add(ImportCancelled());
+              }
+            } else if (state is ImportExportSuccess) {
+              context.read<DeckBloc>().add(LoadDecks());
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+            } else if (state is ImportExportError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
-            case ImportDuplicateAction.cancel:
-              context.read<ImportExportBloc>().add(ImportCancelled());
-          }
-        } else if (state is ImportExportSuccess) {
-          context.read<DeckBloc>().add(LoadDecks());
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
-        } else if (state is ImportExportError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      },
+            }
+          },
+        ),
+        BlocListener<DeckSharingBloc, DeckSharingState>(
+          listener: (context, state) {
+            if (state is DeckSharingError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Flashcard Decks'),
@@ -204,6 +225,16 @@ class _DeckTile extends StatelessWidget {
         motion: const DrawerMotion(),
         children: [
           SlidableAction(
+            onPressed: (_) => _shareViaLink(context),
+            backgroundColor: colorScheme.primary,
+            foregroundColor: colorScheme.onPrimary,
+            icon: Icons.link_outlined,
+            label: 'Share',
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(12),
+            ),
+          ),
+          SlidableAction(
             onPressed: (_) => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => DeckFormScreen(deck: deck)),
@@ -212,9 +243,6 @@ class _DeckTile extends StatelessWidget {
             foregroundColor: colorScheme.onSecondary,
             icon: Icons.edit_outlined,
             label: 'Edit',
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(12),
-            ),
           ),
           SlidableAction(
             onPressed: (_) => _confirmDelete(context),
@@ -257,6 +285,17 @@ class _DeckTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Fetches this deck's cards then opens the share sheet.
+  ///
+  /// Cards are fetched here (not pre-loaded) because the deck list doesn't keep
+  /// all cards in memory. The fetch is fast (local Hive read).
+  Future<void> _shareViaLink(BuildContext context) async {
+    final repo = context.read<HiveFlashcardRepository>();
+    final cards = await repo.getFlashcards(deck.id);
+    if (!context.mounted) return;
+    await showShareDeckSheet(context, deck: deck, cards: cards);
   }
 
   void _confirmDelete(BuildContext context) {

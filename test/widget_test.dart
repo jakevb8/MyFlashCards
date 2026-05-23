@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_flash_cards/blocs/deck_sharing/deck_sharing_bloc.dart';
+import 'package:my_flash_cards/blocs/import_export/import_export_bloc.dart';
 import 'package:my_flash_cards/blocs/theme/theme_bloc.dart';
 import 'package:my_flash_cards/core/theme/app_theme.dart';
 import 'package:my_flash_cards/screens/decks/deck_list_screen.dart';
@@ -10,6 +12,8 @@ import 'package:my_flash_cards/blocs/deck/deck_event.dart';
 import 'package:my_flash_cards/blocs/flashcard/flashcard_bloc.dart';
 import 'package:my_flash_cards/repositories/deck_repository.dart';
 import 'package:my_flash_cards/repositories/flashcard_repository.dart';
+import 'package:my_flash_cards/services/deck_import_export_service.dart';
+import 'package:my_flash_cards/services/deck_sharing_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockDeckRepository extends Mock implements DeckRepository {}
@@ -17,12 +21,26 @@ class MockDeckRepository extends Mock implements DeckRepository {}
 class MockFlashcardRepository extends Mock implements FlashcardRepository {}
 
 Widget _buildApp({required DeckBloc deckBloc}) {
+  final mockDeckRepo = MockDeckRepository();
+  final mockCardRepo = MockFlashcardRepository();
+  when(() => mockDeckRepo.getDecks()).thenAnswer((_) async => []);
   return MultiBlocProvider(
     providers: [
       BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()),
       BlocProvider<DeckBloc>.value(value: deckBloc),
       BlocProvider<FlashcardBloc>(
         create: (_) => FlashcardBloc(repository: MockFlashcardRepository()),
+      ),
+      BlocProvider<ImportExportBloc>(
+        create: (_) => ImportExportBloc(
+          deckRepository: mockDeckRepo,
+          flashcardRepository: mockCardRepo,
+          service: DeckImportExportService(),
+          sharingService: DeckSharingService(),
+        ),
+      ),
+      BlocProvider<DeckSharingBloc>(
+        create: (_) => DeckSharingBloc(service: DeckSharingService()),
       ),
     ],
     child: BlocBuilder<ThemeBloc, dynamic>(

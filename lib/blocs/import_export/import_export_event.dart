@@ -34,6 +34,19 @@ class ImportConfirmMerge extends ImportExportEvent {
 /// User dismissed the duplicate dialog without choosing an action.
 class ImportCancelled extends ImportExportEvent {}
 
+/// App was opened via a deep link containing a share ID.
+///
+/// The bloc fetches the shared deck from Firestore, strips SM-2 progress so
+/// the receiver starts fresh, then runs the standard duplicate-detection flow.
+/// [shareId] is the UUID path segment after 'deck/' in the deep link.
+class ImportSharedDeckRequested extends ImportExportEvent {
+  final String shareId;
+  const ImportSharedDeckRequested(this.shareId);
+
+  @override
+  List<Object?> get props => [shareId];
+}
+
 /// User requested a deck export. Fire-and-forget: writes to a temp file and
 /// triggers the platform share sheet. No navigation side-effects.
 class ExportDeckRequested extends ImportExportEvent {

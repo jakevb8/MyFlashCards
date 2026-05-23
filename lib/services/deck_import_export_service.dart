@@ -147,6 +147,18 @@ class DeckImportExportService {
   }
 
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Public decode entry point (used by DeckSharingService)
+  // ---------------------------------------------------------------------------
+
+  /// Parses a JSON export string previously produced by [encodeJson].
+  ///
+  /// Public wrapper around [_parseJson] so [DeckSharingService] can deserialize
+  /// a shared deck payload without duplicating parsing logic.
+  /// Throws [FormatException] on malformed input.
+  DeckImportExportBundle decodeJson(String source) => _parseJson(source);
+
+  // ---------------------------------------------------------------------------
   // Private parsers
   // ---------------------------------------------------------------------------
 

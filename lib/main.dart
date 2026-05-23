@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,8 +9,10 @@ import 'blocs/analytics/analytics_bloc.dart';
 import 'blocs/analytics/analytics_event.dart';
 import 'blocs/deck/deck_bloc.dart';
 import 'blocs/deck/deck_event.dart';
+import 'blocs/deck_sharing/deck_sharing_bloc.dart';
 import 'blocs/flashcard/flashcard_bloc.dart';
 import 'blocs/import_export/import_export_bloc.dart';
+import 'blocs/import_export/import_export_event.dart';
 import 'blocs/theme/theme_bloc.dart';
 import 'blocs/theme/theme_state.dart';
 import 'core/theme/app_theme.dart';
@@ -25,6 +29,7 @@ import 'screens/backup/backup_screen.dart';
 import 'screens/generate/ai_generate_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'services/deck_import_export_service.dart';
+import 'services/deck_sharing_service.dart';
 import 'services/firebase_backup_service.dart';
 
 // SharedPreferences key tracking when the last auto-backup ran.
@@ -65,11 +70,16 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
   late final FlashcardBloc _flashcardBloc;
   late final AnalyticsBloc _analyticsBloc;
   late final ImportExportBloc _importExportBloc;
+  late final DeckSharingBloc _deckSharingBloc;
 
   final _deckRepo = HiveDeckRepository();
   final _cardRepo = HiveFlashcardRepository();
   final _sessionRepo = HiveStudySessionRepository();
   final _backupService = FirebaseBackupService();
+  final _sharingService = DeckSharingService();
+
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSub;
 
   @override
   void initState() {
@@ -83,18 +93,53 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
       deckRepository: _deckRepo,
       flashcardRepository: _cardRepo,
       service: DeckImportExportService(),
+      sharingService: _sharingService,
     );
+    _deckSharingBloc = DeckSharingBloc(service: _sharingService);
     WidgetsBinding.instance.addObserver(this);
+    _initDeepLinks();
+  }
+
+  /// Wires up the AppLinks listener for deck-share deep links.
+  ///
+  /// Handles both cold-start (getInitialLink) and warm/hot-start (uriLinkStream)
+  /// cases. Malformed or non-share links are silently ignored.
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+
+    // Cold start: app launched by tapping a link while not running.
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleDeepLink(uri);
+    });
+
+    // Warm/hot start: link tapped while the app is already running.
+    _linkSub = _appLinks.uriLinkStream.listen(
+      _handleDeepLink,
+      onError: (_) {
+        // Malformed links are silently ignored to avoid crashing the app.
+      },
+    );
+  }
+
+  /// Dispatches [ImportSharedDeckRequested] for myflashcards://deck/{shareId} links.
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme != 'myflashcards' || uri.host != 'deck') return;
+    final shareId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+    if (shareId != null && shareId.isNotEmpty) {
+      _importExportBloc.add(ImportSharedDeckRequested(shareId));
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _linkSub?.cancel();
     _themeBloc.close();
     _deckBloc.close();
     _flashcardBloc.close();
     _analyticsBloc.close();
     _importExportBloc.close();
+    _deckSharingBloc.close();
     super.dispose();
   }
 
@@ -153,6 +198,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
           BlocProvider.value(value: _flashcardBloc),
           BlocProvider.value(value: _analyticsBloc),
           BlocProvider.value(value: _importExportBloc),
+          BlocProvider.value(value: _deckSharingBloc),
         ],
         child: BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {

@@ -58,6 +58,17 @@
 				<string>com.googleusercontent.apps.REPLACE_WITH_REVERSED_CLIENT_ID</string>
 			</array>
 		</dict>
+		<!-- Custom scheme for deck-share deep links: myflashcards://deck/{shareId} -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.myflashcards.share</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>myflashcards</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

@@ -12,6 +12,7 @@ import '../../models/flashcard.dart';
 import '../study/study_screen.dart';
 import '../study/study_mode_picker_sheet.dart';
 import 'flashcard_form_screen.dart';
+import '../decks/share_deck_dialog.dart';
 
 class FlashcardListScreen extends StatefulWidget {
   final Deck deck;
@@ -66,16 +67,34 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                       ),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.share_outlined),
-                        tooltip: 'Export Deck',
-                        onSelected: (format) =>
+                        tooltip: 'Share / Export Deck',
+                        onSelected: (value) {
+                          if (value == 'share_link') {
+                            showShareDeckSheet(
+                              context,
+                              deck: deck,
+                              cards: state.flashcards,
+                            );
+                          } else {
                             context.read<ImportExportBloc>().add(
                               ExportDeckRequested(
                                 deck: deck,
                                 cards: state.flashcards,
-                                format: format,
+                                format: value,
                               ),
-                            ),
+                            );
+                          }
+                        },
                         itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'share_link',
+                            child: ListTile(
+                              leading: Icon(Icons.link_outlined),
+                              title: Text('Share via Link'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          PopupMenuDivider(),
                           PopupMenuItem(
                             value: 'json',
                             child: Text('Export as JSON'),
