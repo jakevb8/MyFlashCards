@@ -21,6 +21,15 @@ class HiveFlashcardRepository implements FlashcardRepository {
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
+  /// Returns cards from multiple decks in one pass over the Hive box, avoiding
+  /// repeated full scans when launching a bundled multi-deck study session.
+  @override
+  Future<List<Flashcard>> getFlashcardsByDecks(List<String> deckIds) async {
+    final idSet = deckIds.toSet();
+    return _box.values.where((c) => idSet.contains(c.deckId)).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
   /// Returns every flashcard across all decks — used by the backup service.
   Future<List<Flashcard>> getAllFlashcards() async {
     return _box.values.toList();

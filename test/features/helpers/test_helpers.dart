@@ -92,6 +92,12 @@ class FakeFlashcardRepository implements FlashcardRepository {
       _store.where((c) => c.deckId == deckId).toList();
 
   @override
+  Future<List<Flashcard>> getFlashcardsByDecks(List<String> deckIds) async {
+    final idSet = deckIds.toSet();
+    return _store.where((c) => idSet.contains(c.deckId)).toList();
+  }
+
+  @override
   Future<Flashcard> getFlashcard(String id) async =>
       _store.firstWhere((c) => c.id == id);
 
@@ -240,26 +246,35 @@ Widget buildDeckListApp({
   final tBloc = themeBloc ?? ThemeBloc();
   testThemeBloc = tBloc;
 
-  return MultiBlocProvider(
+  return MultiRepositoryProvider(
     providers: [
-      BlocProvider<ThemeBloc>.value(value: tBloc),
-      BlocProvider<DeckBloc>.value(value: bloc),
-      BlocProvider<FlashcardBloc>.value(value: cardBloc),
-      BlocProvider<AnalyticsBloc>.value(value: analyticsBloc),
-      BlocProvider<ImportExportBloc>.value(value: importExportBloc),
-      BlocProvider<DeckSharingBloc>.value(value: sharingBloc),
+      RepositoryProvider<FlashcardRepository>.value(value: cardRepo),
+      RepositoryProvider<StudySessionRepository>.value(value: testSessionRepo),
+      RepositoryProvider<NotificationService>.value(
+        value: FakeNotificationService(),
+      ),
     ],
-    child: BlocBuilder<ThemeBloc, ThemeState>(
-      bloc: tBloc,
-      builder: (_, themeState) => MaterialApp(
-        theme: AppTheme.light(themeState.themeType),
-        darkTheme: AppTheme.dark(themeState.themeType),
-        themeMode: themeState.themeMode,
-        home: const DeckListScreen(),
-        routes: {
-          '/settings': (_) =>
-              const Scaffold(body: Center(child: Text('Settings'))),
-        },
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider<ThemeBloc>.value(value: tBloc),
+        BlocProvider<DeckBloc>.value(value: bloc),
+        BlocProvider<FlashcardBloc>.value(value: cardBloc),
+        BlocProvider<AnalyticsBloc>.value(value: analyticsBloc),
+        BlocProvider<ImportExportBloc>.value(value: importExportBloc),
+        BlocProvider<DeckSharingBloc>.value(value: sharingBloc),
+      ],
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        bloc: tBloc,
+        builder: (_, themeState) => MaterialApp(
+          theme: AppTheme.light(themeState.themeType),
+          darkTheme: AppTheme.dark(themeState.themeType),
+          themeMode: themeState.themeMode,
+          home: const DeckListScreen(),
+          routes: {
+            '/settings': (_) =>
+                const Scaffold(body: Center(child: Text('Settings'))),
+          },
+        ),
       ),
     ),
   );
@@ -346,7 +361,7 @@ Widget buildStudyApp({
       child: MaterialApp(
         theme: AppTheme.light(),
         home: StudyScreen(
-          deck: deck,
+          decks: [deck],
           flashcards: cards,
           randomize: randomize,
           flipped: flipped,

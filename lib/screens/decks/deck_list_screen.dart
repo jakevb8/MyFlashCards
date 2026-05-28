@@ -19,17 +19,104 @@ import '../../repositories/flashcard_repository.dart';
 import '../../repositories/hive_flashcard_repository.dart';
 import '../../widgets/theme_picker_sheet.dart';
 import '../cards/flashcard_list_screen.dart';
+import '../study/study_mode_picker_sheet.dart';
+import '../study/study_screen.dart';
 import 'deck_form_screen.dart';
 import 'import_export_dialogs.dart';
 import 'share_deck_dialog.dart';
 
-class DeckListScreen extends StatelessWidget {
+/// Deck list home screen.
+///
+/// Supports multi-select mode (long-press any tile to enter) for bundled study
+/// sessions spanning multiple decks. While selecting, the app bar switches to a
+/// selection toolbar and the FAB is hidden.
+class DeckListScreen extends StatefulWidget {
   const DeckListScreen({super.key});
 
   @override
+  State<DeckListScreen> createState() => _DeckListScreenState();
+}
+
+class _DeckListScreenState extends State<DeckListScreen> {
+  // Multi-select state — kept local because it is purely UI; no bloc needed.
+  bool _multiSelectMode = false;
+  final Set<String> _selectedDeckIds = {};
+
+  void _enterMultiSelect(String deckId) {
+    setState(() {
+      _multiSelectMode = true;
+      _selectedDeckIds.add(deckId);
+    });
+  }
+
+  void _toggleSelection(String deckId) {
+    setState(() {
+      if (_selectedDeckIds.contains(deckId)) {
+        _selectedDeckIds.remove(deckId);
+        if (_selectedDeckIds.isEmpty) _multiSelectMode = false;
+      } else {
+        _selectedDeckIds.add(deckId);
+      }
+    });
+  }
+
+  void _cancelMultiSelect() {
+    setState(() {
+      _multiSelectMode = false;
+      _selectedDeckIds.clear();
+    });
+  }
+
+  /// Fetches cards for all selected decks, shows the mode picker, then
+  /// navigates to a merged study session.
+  Future<void> _studySelectedDecks(
+    BuildContext context,
+    List<Deck> allDecks,
+  ) async {
+    final selectedDecks = allDecks
+        .where((d) => _selectedDeckIds.contains(d.id))
+        .toList();
+
+    final cardRepo = context.read<FlashcardRepository>();
+    final allCards = await cardRepo.getFlashcardsByDecks(
+      selectedDecks.map((d) => d.id).toList(),
+    );
+    // Exclude archived cards — StudyBloc will further filter to due-only.
+    final studyCards = allCards.where((c) => !c.archived).toList();
+
+    if (!context.mounted) return;
+
+    final selection = await StudyModePickerSheet.show(context);
+    if (selection == null || !context.mounted) return;
+
+    // Clear selection before navigating so the screen is clean on back.
+    _cancelMultiSelect();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudyScreen(
+          decks: selectedDecks,
+          flashcards: studyCards,
+          randomize: selection.randomize,
+          flipped: selection.flipped,
+          mode: selection.mode,
+          tolerantMatching: selection.tolerantMatching,
+        ),
+      ),
+    );
+  }
+
+  void _showAddDeckSheet(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DeckFormScreen()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // MultiBlocListener handles import feedback (and reloads deck list on
-    // success) plus sharing errors from DeckSharingBloc.
+    // MultiBlocListener handles import feedback and sharing errors.
     return MultiBlocListener(
       listeners: [
         BlocListener<ImportExportBloc, ImportExportState>(
@@ -83,115 +170,144 @@ class DeckListScreen extends StatelessWidget {
           },
         ),
       ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('My Flashcard Decks'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.bar_chart_outlined),
-              tooltip: 'Study Analytics',
-              onPressed: () => Navigator.pushNamed(context, '/analytics'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Settings',
-              onPressed: () => Navigator.pushNamed(context, '/settings'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.auto_awesome_outlined),
-              tooltip: 'Generate with AI',
-              onPressed: () => Navigator.pushNamed(context, '/generate'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.palette_outlined),
-              tooltip: 'Change Theme',
-              onPressed: () => ThemePickerSheet.show(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.cloud_upload_outlined),
-              tooltip: 'Backup to Cloud',
-              onPressed: () => Navigator.pushNamed(context, '/backup'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.file_upload_outlined),
-              tooltip: 'Import Deck',
-              onPressed: () =>
-                  context.read<ImportExportBloc>().add(ImportDeckRequested()),
-            ),
-          ],
-        ),
-        body: BlocBuilder<DeckBloc, DeckState>(
-          builder: (context, state) {
-            if (state is DeckLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is DeckError) {
-              return Center(child: Text('Error: ${state.message}'));
-            }
-            if (state is DeckLoaded) {
-              if (state.decks.isEmpty) {
-                return _EmptyState();
-              }
-              // All unique tags across every deck — used for the filter bar.
-              final allTags = state.decks.expand((d) => d.tags).toSet().toList()
-                ..sort();
-              // Decks to display after applying the active tag filter.
-              final displayedDecks = state.selectedTag == null
-                  ? state.decks
-                  : state.decks
-                        .where((d) => d.tags.contains(state.selectedTag))
-                        .toList();
-              return Column(
-                children: [
-                  if (allTags.isNotEmpty)
-                    _TagFilterBar(
-                      allTags: allTags,
-                      selectedTag: state.selectedTag,
+      // BlocBuilder wraps the whole Scaffold so the AppBar can react to both
+      // deck list state (for the Study Selected action) and multi-select state.
+      child: BlocBuilder<DeckBloc, DeckState>(
+        builder: (context, deckState) {
+          return Scaffold(
+            appBar: _multiSelectMode
+                ? AppBar(
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Cancel selection',
+                      onPressed: _cancelMultiSelect,
                     ),
-                  _StreakBanner(),
-                  _DailyGoalBanner(),
-                  _SwipeHintBanner(
-                    message: 'Swipe left on a deck to edit or delete',
+                    title: Text('${_selectedDeckIds.length} selected'),
+                    actions: [
+                      if (_selectedDeckIds.length >= 2 &&
+                          deckState is DeckLoaded)
+                        TextButton.icon(
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Study Selected'),
+                          onPressed: () =>
+                              _studySelectedDecks(context, deckState.decks),
+                        ),
+                    ],
+                  )
+                : AppBar(
+                    title: const Text('My Flashcard Decks'),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.bar_chart_outlined),
+                        tooltip: 'Study Analytics',
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/analytics'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings_outlined),
+                        tooltip: 'Settings',
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/settings'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                        tooltip: 'Generate with AI',
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/generate'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.palette_outlined),
+                        tooltip: 'Change Theme',
+                        onPressed: () => ThemePickerSheet.show(context),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.cloud_upload_outlined),
+                        tooltip: 'Backup to Cloud',
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/backup'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.file_upload_outlined),
+                        tooltip: 'Import Deck',
+                        onPressed: () => context.read<ImportExportBloc>().add(
+                          ImportDeckRequested(),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: displayedDecks.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No decks tagged "${state.selectedTag}"',
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: displayedDecks.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final deck = displayedDecks[index];
-                              return _DeckTile(deck: deck);
-                            },
-                          ),
+            body: _buildBody(context, deckState),
+            floatingActionButton: _multiSelectMode
+                ? null
+                : FloatingActionButton.extended(
+                    onPressed: () => _showAddDeckSheet(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New Deck'),
                   ),
-                ],
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showAddDeckSheet(context),
-          icon: const Icon(Icons.add),
-          label: const Text('New Deck'),
-        ),
-      ), // Scaffold
-    ); // BlocListener
+          );
+        },
+      ),
+    );
   }
 
-  void _showAddDeckSheet(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const DeckFormScreen()),
-    );
+  Widget _buildBody(BuildContext context, DeckState state) {
+    if (state is DeckLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state is DeckError) {
+      return Center(child: Text('Error: ${state.message}'));
+    }
+    if (state is DeckLoaded) {
+      if (state.decks.isEmpty) {
+        return _EmptyState();
+      }
+      // All unique tags across every deck — used for the filter bar.
+      final allTags = state.decks.expand((d) => d.tags).toSet().toList()
+        ..sort();
+      // Decks to display after applying the active tag filter.
+      final displayedDecks = state.selectedTag == null
+          ? state.decks
+          : state.decks
+                .where((d) => d.tags.contains(state.selectedTag))
+                .toList();
+      return Column(
+        children: [
+          if (allTags.isNotEmpty && !_multiSelectMode)
+            _TagFilterBar(allTags: allTags, selectedTag: state.selectedTag),
+          if (!_multiSelectMode) ...[_StreakBanner(), _DailyGoalBanner()],
+          if (!_multiSelectMode)
+            _SwipeHintBanner(message: 'Swipe left on a deck to edit or delete')
+          else
+            _SwipeHintBanner(
+              message: 'Long-press to select; tap Study Selected to study',
+            ),
+          Expanded(
+            child: displayedDecks.isEmpty
+                ? Center(
+                    child: Text(
+                      'No decks tagged "${state.selectedTag}"',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: displayedDecks.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final deck = displayedDecks[index];
+                      return _DeckTile(
+                        deck: deck,
+                        isMultiSelectMode: _multiSelectMode,
+                        isSelected: _selectedDeckIds.contains(deck.id),
+                        onLongPress: () => _enterMultiSelect(deck.id),
+                        onToggleSelect: () => _toggleSelection(deck.id),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 
@@ -330,7 +446,18 @@ class _DailyGoalBannerState extends State<_DailyGoalBanner> {
 
 class _DeckTile extends StatefulWidget {
   final Deck deck;
-  const _DeckTile({required this.deck});
+  final bool isMultiSelectMode;
+  final bool isSelected;
+  final VoidCallback onLongPress;
+  final VoidCallback onToggleSelect;
+
+  const _DeckTile({
+    required this.deck,
+    this.isMultiSelectMode = false,
+    this.isSelected = false,
+    required this.onLongPress,
+    required this.onToggleSelect,
+  });
 
   @override
   State<_DeckTile> createState() => _DeckTileState();
@@ -359,6 +486,88 @@ class _DeckTileState extends State<_DeckTile> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    final card = Card(
+      // Highlight selected tiles with a tinted background.
+      color: widget.isSelected
+          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+          : null,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: widget.isMultiSelectMode
+            ? Checkbox(
+                value: widget.isSelected,
+                onChanged: (_) => widget.onToggleSelect(),
+              )
+            : CircleAvatar(
+                backgroundColor: colorScheme.primaryContainer,
+                child: Text(
+                  widget.deck.name.isNotEmpty
+                      ? widget.deck.name[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+        title: Text(
+          widget.deck.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.deck.description.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(widget.deck.description),
+              ),
+            FutureBuilder<_DeckStats>(
+              future: _statsFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const SizedBox.shrink();
+                return _DeckProgressRow(stats: snapshot.data!);
+              },
+            ),
+            if (widget.deck.tags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Wrap(
+                  spacing: 4,
+                  runSpacing: 2,
+                  children: [
+                    for (final tag in widget.deck.tags)
+                      Chip(
+                        label: Text(tag),
+                        labelStyle: Theme.of(context).textTheme.labelSmall,
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        trailing: widget.isMultiSelectMode
+            ? null
+            : const Icon(Icons.chevron_right),
+        onTap: widget.isMultiSelectMode
+            ? widget.onToggleSelect
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FlashcardListScreen(deck: widget.deck),
+                ),
+              ),
+        onLongPress: widget.isMultiSelectMode ? null : widget.onLongPress,
+      ),
+    );
+
+    // Disable swipe actions during multi-select to prevent accidental deletion.
+    if (widget.isMultiSelectMode) return card;
+
     return Slidable(
       key: ValueKey(widget.deck.id),
       endActionPane: ActionPane(
@@ -398,73 +607,7 @@ class _DeckTileState extends State<_DeckTile> {
           ),
         ],
       ),
-      child: Card(
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
-          leading: CircleAvatar(
-            backgroundColor: colorScheme.primaryContainer,
-            child: Text(
-              widget.deck.name.isNotEmpty
-                  ? widget.deck.name[0].toUpperCase()
-                  : '?',
-              style: TextStyle(
-                color: colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          title: Text(
-            widget.deck.name,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (widget.deck.description.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(widget.deck.description),
-                ),
-              FutureBuilder<_DeckStats>(
-                future: _statsFuture,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const SizedBox.shrink();
-                  return _DeckProgressRow(stats: snapshot.data!);
-                },
-              ),
-              if (widget.deck.tags.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Wrap(
-                    spacing: 4,
-                    runSpacing: 2,
-                    children: [
-                      for (final tag in widget.deck.tags)
-                        Chip(
-                          label: Text(tag),
-                          labelStyle: Theme.of(context).textTheme.labelSmall,
-                          padding: EdgeInsets.zero,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => FlashcardListScreen(deck: widget.deck),
-            ),
-          ),
-        ),
-      ),
+      child: card,
     );
   }
 

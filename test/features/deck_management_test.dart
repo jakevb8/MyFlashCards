@@ -30,6 +30,11 @@ import './step/i_have_a_deck_named_french_words_with3_cards.dart';
 import './step/i_have_a_deck_tagged_science_and_a_deck_tagged_history.dart';
 import './step/i_filter_by_the_tag_science.dart';
 import './step/i_should_only_see_the_science_deck.dart';
+import './step/i_have_two_decks_each_with_due_cards.dart';
+import './step/i_long_press_the_first_deck_to_enter_multi_select_mode.dart';
+import './step/i_tap_the_second_deck_to_select_it.dart';
+import './step/i_tap_study_selected.dart';
+import './step/the_study_session_should_start_with_cards_from_both_decks.dart';
 
 void main() {
   group('''Deck Management''', () {
@@ -82,6 +87,13 @@ void main() {
       await iHaveADeckTaggedScienceAndADeckTaggedHistory(tester);
       await iFilterByTheTagScience(tester);
       await iShouldOnlySeeTheScienceDeck(tester);
+    });
+    testWidgets('''Study cards from multiple selected decks''', (tester) async {
+      await iHaveTwoDecksEachWithDueCards(tester);
+      await iLongPressTheFirstDeckToEnterMultiSelectMode(tester);
+      await iTapTheSecondDeckToSelectIt(tester);
+      await iTapStudySelected(tester);
+      await theStudySessionShouldStartWithCardsFromBothDecks(tester);
     });
   });
 }

@@ -232,7 +232,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => StudyScreen(
-          deck: deck,
+          decks: [deck],
           flashcards: studyCards,
           randomize: selection.randomize,
           flipped: selection.flipped,

@@ -50,3 +50,10 @@ Feature: Deck Management
     Given I have a deck tagged "science" and a deck tagged "history"
     When I filter by the tag "science"
     Then I should only see the "science" deck
+
+  Scenario: Study cards from multiple selected decks
+    Given I have two decks each with due cards
+    When I long-press the first deck to enter multi-select mode
+    And I tap the second deck to select it
+    And I tap "Study Selected"
+    Then the study session should start with cards from both decks

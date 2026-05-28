@@ -20,8 +20,14 @@ import '../../repositories/study_session_repository.dart';
 import '../../services/notification_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Study session screen.
+///
+/// Accepts one or more source [decks] — when multiple decks are selected from
+/// the deck list (bundled study), all their [flashcards] are merged into a
+/// single list before being passed here. [StudyBloc] handles due-card filtering
+/// and mode-specific logic regardless of how many decks contributed cards.
 class StudyScreen extends StatelessWidget {
-  final Deck deck;
+  final List<Deck> decks;
   final List<Flashcard> flashcards;
   final bool randomize;
   final bool flipped;
@@ -30,13 +36,23 @@ class StudyScreen extends StatelessWidget {
 
   const StudyScreen({
     super.key,
-    required this.deck,
+    required this.decks,
     required this.flashcards,
     this.randomize = false,
     this.flipped = false,
     this.mode = StudyMode.flashcard,
     this.tolerantMatching = false,
   });
+
+  /// Display name shown in the AppBar.
+  ///
+  /// Single deck → deck name. Two decks → "A + B". Three or more → "A + B & N more".
+  String get _displayName {
+    if (decks.length == 1) return decks.first.name;
+    final base = '${decks.first.name} + ${decks[1].name}';
+    if (decks.length == 2) return base;
+    return '$base & ${decks.length - 2} more';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,18 +104,22 @@ class StudyScreen extends StatelessWidget {
             },
           ),
         ],
-        child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
+        child: _StudyView(
+          displayName: _displayName,
+          flashcards: flashcards,
+          flipped: flipped,
+        ),
       ),
     );
   }
 }
 
 class _StudyView extends StatelessWidget {
-  final Deck deck;
+  final String displayName;
   final List<Flashcard> flashcards;
   final bool flipped;
   const _StudyView({
-    required this.deck,
+    required this.displayName,
     required this.flashcards,
     required this.flipped,
   });
@@ -108,7 +128,7 @@ class _StudyView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(deck.name),
+        title: Text(displayName),
         actions: [
           // Edit button — only visible when a card is being studied.
           BlocBuilder<StudyBloc, StudyState>(

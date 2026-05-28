@@ -31,6 +31,12 @@ class FakeFlashcardRepository implements FlashcardRepository {
       _store.where((c) => c.deckId == deckId).toList();
 
   @override
+  Future<List<Flashcard>> getFlashcardsByDecks(List<String> deckIds) async {
+    final idSet = deckIds.toSet();
+    return _store.where((c) => idSet.contains(c.deckId)).toList();
+  }
+
+  @override
   Future<Flashcard> getFlashcard(String id) async =>
       _store.firstWhere((c) => c.id == id);
 
