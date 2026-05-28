@@ -40,3 +40,8 @@ Feature: Deck Management
     Given a deck is created with a pre-assigned ID
     Then the deck stored in the repository should have that same ID
     And it should not be replaced with a new UUID
+
+  Scenario: Deck tile shows per-deck progress stats
+    Given I have a deck named "French Words" with 3 cards
+    When I am on the deck list screen
+    Then I should see the hint "swipe left on a deck to edit or delete"

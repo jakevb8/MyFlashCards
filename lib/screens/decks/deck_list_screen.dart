@@ -12,6 +12,8 @@ import '../../blocs/import_export/import_export_bloc.dart';
 import '../../blocs/import_export/import_export_event.dart';
 import '../../blocs/import_export/import_export_state.dart';
 import '../../models/deck.dart';
+import '../../models/flashcard.dart';
+import '../../repositories/flashcard_repository.dart';
 import '../../repositories/hive_flashcard_repository.dart';
 import '../../widgets/theme_picker_sheet.dart';
 import '../cards/flashcard_list_screen.dart';
@@ -212,15 +214,39 @@ class _StreakBanner extends StatelessWidget {
   }
 }
 
-class _DeckTile extends StatelessWidget {
+class _DeckTile extends StatefulWidget {
   final Deck deck;
   const _DeckTile({required this.deck});
+
+  @override
+  State<_DeckTile> createState() => _DeckTileState();
+}
+
+class _DeckTileState extends State<_DeckTile> {
+  late Future<_DeckStats> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _statsFuture = _loadStats();
+  }
+
+  /// Loads the stats for this deck from the flashcard repository.
+  ///
+  /// Using initState rather than a builder-level FutureBuilder.future so the
+  /// future is not recreated on every rebuild (which would cause a loading
+  /// flash on every parent list rebuild).
+  Future<_DeckStats> _loadStats() async {
+    final repo = context.read<FlashcardRepository>();
+    final cards = await repo.getFlashcards(widget.deck.id);
+    return _DeckStats.fromCards(cards);
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Slidable(
-      key: ValueKey(deck.id),
+      key: ValueKey(widget.deck.id),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
         children: [
@@ -237,7 +263,9 @@ class _DeckTile extends StatelessWidget {
           SlidableAction(
             onPressed: (_) => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => DeckFormScreen(deck: deck)),
+              MaterialPageRoute(
+                builder: (_) => DeckFormScreen(deck: widget.deck),
+              ),
             ),
             backgroundColor: colorScheme.secondary,
             foregroundColor: colorScheme.onSecondary,
@@ -265,7 +293,9 @@ class _DeckTile extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: colorScheme.primaryContainer,
             child: Text(
-              deck.name.isNotEmpty ? deck.name[0].toUpperCase() : '?',
+              widget.deck.name.isNotEmpty
+                  ? widget.deck.name[0].toUpperCase()
+                  : '?',
               style: TextStyle(
                 color: colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.bold,
@@ -273,29 +303,43 @@ class _DeckTile extends StatelessWidget {
             ),
           ),
           title: Text(
-            deck.name,
+            widget.deck.name,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: deck.description.isNotEmpty ? Text(deck.description) : null,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.deck.description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(widget.deck.description),
+                ),
+              FutureBuilder<_DeckStats>(
+                future: _statsFuture,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const SizedBox.shrink();
+                  return _DeckProgressRow(stats: snapshot.data!);
+                },
+              ),
+            ],
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => FlashcardListScreen(deck: deck)),
+            MaterialPageRoute(
+              builder: (_) => FlashcardListScreen(deck: widget.deck),
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Fetches this deck's cards then opens the share sheet.
-  ///
-  /// Cards are fetched here (not pre-loaded) because the deck list doesn't keep
-  /// all cards in memory. The fetch is fast (local Hive read).
   Future<void> _shareViaLink(BuildContext context) async {
     final repo = context.read<HiveFlashcardRepository>();
-    final cards = await repo.getFlashcards(deck.id);
+    final cards = await repo.getFlashcards(widget.deck.id);
     if (!context.mounted) return;
-    await showShareDeckSheet(context, deck: deck, cards: cards);
+    await showShareDeckSheet(context, deck: widget.deck, cards: cards);
   }
 
   void _confirmDelete(BuildContext context) {
@@ -303,7 +347,7 @@ class _DeckTile extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Deck'),
-        content: Text('Delete "${deck.name}" and all its cards?'),
+        content: Text('Delete "${widget.deck.name}" and all its cards?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -314,13 +358,125 @@ class _DeckTile extends StatelessWidget {
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () {
-              context.read<DeckBloc>().add(DeleteDeck(deck.id));
+              context.read<DeckBloc>().add(DeleteDeck(widget.deck.id));
               Navigator.pop(ctx);
             },
             child: const Text('Delete'),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Aggregated progress metrics for a single deck, computed from its card list.
+class _DeckStats {
+  final int dueToday;
+  final int activeCards;
+  final int masteredCards;
+
+  const _DeckStats({
+    required this.dueToday,
+    required this.activeCards,
+    required this.masteredCards,
+  });
+
+  /// Computes stats from a full card list (archived + active mixed).
+  factory _DeckStats.fromCards(List<Flashcard> cards) {
+    final now = DateTime.now();
+    int due = 0;
+    int active = 0;
+    int mastered = 0;
+    for (final c in cards) {
+      if (c.archived) {
+        mastered++;
+      } else {
+        active++;
+        if (c.nextReviewAt == null || !c.nextReviewAt!.isAfter(now)) due++;
+      }
+    }
+    return _DeckStats(
+      dueToday: due,
+      activeCards: active,
+      masteredCards: mastered,
+    );
+  }
+
+  bool get allCaughtUp => dueToday == 0 && activeCards > 0;
+  bool get isEmpty => activeCards == 0 && masteredCards == 0;
+}
+
+/// A compact row of stat chips shown below the deck name in each deck tile.
+class _DeckProgressRow extends StatelessWidget {
+  final _DeckStats stats;
+  const _DeckProgressRow({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    if (stats.isEmpty) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    final textStyle = Theme.of(context).textTheme.labelSmall;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 2,
+      children: [
+        if (stats.allCaughtUp)
+          _StatChip(
+            icon: Icons.check_circle_outline,
+            label: 'All caught up',
+            color: cs.primary,
+            textStyle: textStyle,
+          )
+        else if (stats.dueToday > 0)
+          _StatChip(
+            icon: Icons.schedule_outlined,
+            label: '${stats.dueToday} due',
+            color: cs.error,
+            textStyle: textStyle,
+          ),
+        if (stats.activeCards > 0)
+          _StatChip(
+            icon: Icons.layers_outlined,
+            label: '${stats.activeCards} active',
+            color: cs.secondary,
+            textStyle: textStyle,
+          ),
+        if (stats.masteredCards > 0)
+          _StatChip(
+            icon: Icons.star_outline,
+            label: '${stats.masteredCards} mastered',
+            color: cs.tertiary,
+            textStyle: textStyle,
+          ),
+      ],
+    );
+  }
+}
+
+/// A single icon + label chip used in the deck progress row.
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final TextStyle? textStyle;
+
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 2),
+        Text(label, style: textStyle?.copyWith(color: color)),
+      ],
     );
   }
 }

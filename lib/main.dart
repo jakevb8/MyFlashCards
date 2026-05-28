@@ -20,6 +20,7 @@ import 'firebase_options.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
 import 'models/study_session.dart';
+import 'repositories/flashcard_repository.dart';
 import 'repositories/hive_deck_repository.dart';
 import 'repositories/hive_flashcard_repository.dart';
 import 'repositories/hive_study_session_repository.dart';
@@ -220,7 +221,11 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: _deckRepo),
+        // Registered under both its concrete type (used by _shareViaLink and
+        // other callers that need HiveFlashcardRepository-specific methods) and
+        // the abstract interface (used by StudyScreen, deck tile stats, etc.).
         RepositoryProvider.value(value: _cardRepo),
+        RepositoryProvider<FlashcardRepository>.value(value: _cardRepo),
         RepositoryProvider.value(value: _sessionRepo),
         RepositoryProvider.value(value: _notificationService),
       ],
