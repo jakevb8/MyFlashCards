@@ -5,33 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-010] Daily Review Reminders
-
-**Priority:** P0
-**Status:** queued
-
-### Goal
-Surface a local push notification each day when the user has cards due for review, pulling them back into the app at a configured time. The SM-2 algorithm schedules cards but nothing currently prompts the user to return.
-
-### User Stories
-- As a learner, I want to receive a daily notification showing how many cards are due, so I never miss a scheduled review.
-- As a learner, I want to set the notification time (e.g. 8 AM), so the reminder fits my routine.
-- As a learner, I want the notification to be cancelled if I've already studied today, so I'm not nagged after completing a session.
-
-### Acceptance Criteria
-- `flutter_local_notifications` used; notification permission requested on first enable.
-- Settings screen has a toggle ("Daily reminder") and a time picker.
-- Notification body: "You have N cards due today" (N computed from local Hive data).
-- After completing a study session the notification for that day is cancelled/rescheduled.
-- Works on both iOS and Android.
-- Preference stored in `shared_preferences`.
-
-### Out of Scope
-- Firebase Cloud Messaging / server-side push.
-- Per-deck notifications.
-
----
-
 ## [FEAT-011] Per-Deck Progress Dashboard
 
 **Priority:** P1

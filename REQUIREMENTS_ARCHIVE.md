@@ -121,3 +121,28 @@ Files changed: `deck_sharing_service.dart` (new), `deck_sharing_bloc/` (new),
 `import_export_event.dart`, `deck_list_screen.dart`, `flashcard_list_screen.dart`,
 `main.dart`, `AndroidManifest.xml`, `Info.plist`, `firestore.rules`,
 `feat_007_deck_sharing.feature` (new), `widget_test.dart`.
+
+---
+
+## [FEAT-010] Daily Review Reminders
+
+**Priority:** P0
+**Status:** completed
+**Commit:** 67bdacb
+
+### Goal
+Surface a local push notification each day when the user has cards due for review.
+
+### Acceptance Criteria (all met)
+- `flutter_local_notifications` + `timezone` packages added.
+- Settings screen has a "Daily reminder" SwitchListTile and a time picker.
+- Notification body: "You have N cards due today" (computed from local Hive).
+- After completing a study session the notification is rescheduled.
+- Works on iOS and Android; permission requested on first enable.
+- Preference stored in `shared_preferences` via `kReminderEnabledKey`, `kReminderHourKey`, `kReminderMinuteKey`.
+
+### Implementation Notes
+`NotificationService` wraps `FlutterLocalNotificationsPlugin` with timezone-aware
+`zonedSchedule`. `SettingsBloc` gains `NotificationPrefsLoaded`, `ReminderToggled`,
+`ReminderTimeChanged` events. `FlashcardRepository.countDueCards()` added to interface.
+`main.dart` reschedules on app resume via `_maybeRescheduleReminder()`.
