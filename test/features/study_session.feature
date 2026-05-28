@@ -54,3 +54,32 @@ Feature: Study Session
     Given I am studying a flipped deck
     When I tap the shuffle icon
     Then the cards should be shuffled and still show back→front
+
+Feature: Card-Level Edit During Study
+
+  Scenario: Edit icon is visible during a study session
+    Given I am studying a deck with at least one card
+    Then I should see the edit icon in the app bar
+
+  Scenario: Edit icon is hidden on completion screen
+    Given I have just completed a study session
+    Then the edit icon should not be visible in the app bar
+
+  Scenario: Edit a card's front during a study session
+    Given I am studying a deck
+    When I tap the edit icon
+    And I change the front text to "Updated Front"
+    And I tap "Save"
+    Then the card should now show "Updated Front" as the front text
+    And my place in the session should be preserved
+
+  Scenario: Edit saves to persistent storage
+    Given I edited a card's text during a session
+    When I exit and re-enter the study session
+    Then the card should show the updated text
+
+  Scenario: Cancel edit leaves card unchanged
+    Given I am studying a deck
+    When I tap the edit icon
+    And I tap "Cancel"
+    Then the card text should be unchanged

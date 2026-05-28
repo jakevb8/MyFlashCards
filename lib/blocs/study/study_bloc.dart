@@ -58,6 +58,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     on<RestartSession>(_onRestartSession);
     on<MarkStarredInSession>(_onMarkStarredInSession);
     on<RateCard>(_onRateCard);
+    on<EditCardInSession>(_onEditCardInSession);
   }
 
   /// Returns cards due now: new cards (nextReviewAt == null) or overdue cards.
@@ -253,6 +254,49 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
         ),
       );
     }
+  }
+
+  /// Persists an inline edit made during a session and refreshes in-session state.
+  ///
+  /// [event.updated] is always the canonical (non-flipped) card. The handler:
+  ///   1. Writes to storage via the repository.
+  ///   2. Patches [_originalCards] so RestartSession picks up the new text.
+  ///   3. Patches [_allCardsFlipped] so the MC distractor pool reflects the edit.
+  ///   4. Re-applies the flip transform for the display copy and emits new state.
+  Future<void> _onEditCardInSession(
+    EditCardInSession event,
+    Emitter<StudyState> emit,
+  ) async {
+    if (state is! StudyInProgress) return;
+    final current = state as StudyInProgress;
+
+    await _flashcardRepository.updateFlashcard(event.updated);
+
+    // Patch canonical backup list so restart rebuilds with new text.
+    final origIdx = _originalCards.indexWhere((c) => c.id == event.updated.id);
+    if (origIdx >= 0) _originalCards[origIdx] = event.updated;
+
+    // Build the display-oriented copy, applying the session flip if active.
+    final displayCard = _flipped
+        ? event.updated.copyWith(
+            front: event.updated.back,
+            back: event.updated.front,
+          )
+        : event.updated;
+
+    // Patch the MC distractor pool so other cards don't see stale answer text.
+    final allIdx = _allCardsFlipped.indexWhere((c) => c.id == event.updated.id);
+    if (allIdx >= 0) _allCardsFlipped[allIdx] = displayCard;
+
+    final updatedCards = List<Flashcard>.from(current.cards);
+    updatedCards[current.currentIndex] = displayCard;
+
+    emit(
+      current.copyWith(
+        cards: updatedCards,
+        choices: _generateChoices(displayCard, _allCardsFlipped),
+      ),
+    );
   }
 
   /// Writes a [StudySession] record to the repository for the just-completed session.

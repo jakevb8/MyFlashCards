@@ -80,3 +80,15 @@ class RateCard extends StudyEvent {
   @override
   List<Object?> get props => [cardId, quality];
 }
+
+/// User edited the current card's text during an active session.
+///
+/// [updated] must be in **canonical** (non-flipped) orientation — i.e. the
+/// real front/back values, not the swapped display values used in flipped mode.
+/// StudyBloc re-applies the flip transform when updating the session card list.
+class EditCardInSession extends StudyEvent {
+  final Flashcard updated;
+  const EditCardInSession(this.updated);
+  @override
+  List<Object?> get props => [updated];
+}

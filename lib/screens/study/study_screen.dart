@@ -110,6 +110,17 @@ class _StudyView extends StatelessWidget {
       appBar: AppBar(
         title: Text(deck.name),
         actions: [
+          // Edit button — only visible when a card is being studied.
+          BlocBuilder<StudyBloc, StudyState>(
+            builder: (context, state) {
+              if (state is! StudyInProgress) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit this card',
+                onPressed: () => _showEditCardSheet(context, state, flipped),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(
               Icons.flip_camera_android_outlined,
@@ -189,6 +200,50 @@ class _StudyView extends StatelessWidget {
             };
           }
           return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    );
+  }
+
+  /// Opens a modal bottom sheet that lets the user edit the current card's
+  /// front and back text without losing their place in the session.
+  ///
+  /// [sessionFlipped] is the session-level flip flag stored in [_StudyView].
+  /// It is used to un-swap the display card back to its canonical orientation
+  /// before populating the text fields, so the user always sees "front" as the
+  /// question side and "back" as the answer side regardless of flip mode.
+  void _showEditCardSheet(
+    BuildContext context,
+    StudyInProgress state,
+    bool sessionFlipped,
+  ) {
+    final display = state.currentCard;
+    // Un-apply the session flip so the edit sheet shows canonical values.
+    final canonicalFront = sessionFlipped ? display.back : display.front;
+    final canonicalBack = sessionFlipped ? display.front : display.back;
+    // Capture the bloc before entering the sheet's builder (new route context).
+    final bloc = context.read<StudyBloc>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => _EditCardSheet(
+        card: display,
+        initialFront: canonicalFront,
+        initialBack: canonicalBack,
+        onSave: (front, back) {
+          bloc.add(
+            EditCardInSession(
+              display.copyWith(
+                front: front,
+                back: back,
+                updatedAt: DateTime.now(),
+              ),
+            ),
+          );
         },
       ),
     );
@@ -887,6 +942,133 @@ class _CardFace extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inline card editor (bottom sheet)
+// ---------------------------------------------------------------------------
+
+/// Bottom sheet body for editing a flashcard's front and back during a session.
+///
+/// Dispatching [EditCardInSession] is handled by the caller via [onSave] so
+/// that this widget stays decoupled from [StudyBloc].
+class _EditCardSheet extends StatefulWidget {
+  final Flashcard card;
+  final String initialFront;
+  final String initialBack;
+  final void Function(String front, String back) onSave;
+
+  const _EditCardSheet({
+    required this.card,
+    required this.initialFront,
+    required this.initialBack,
+    required this.onSave,
+  });
+
+  @override
+  State<_EditCardSheet> createState() => _EditCardSheetState();
+}
+
+class _EditCardSheetState extends State<_EditCardSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _frontCtrl;
+  late final TextEditingController _backCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _frontCtrl = TextEditingController(text: widget.initialFront);
+    _backCtrl = TextEditingController(text: widget.initialBack);
+  }
+
+  @override
+  void dispose() {
+    _frontCtrl.dispose();
+    _backCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    widget.onSave(_frontCtrl.text.trim(), _backCtrl.text.trim());
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Edit Card', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _frontCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Front',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: null,
+              textCapitalization: TextCapitalization.sentences,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _backCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Back',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: null,
+              textCapitalization: TextCapitalization.sentences,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _submit,
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
