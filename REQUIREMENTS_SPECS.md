@@ -5,30 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-013] Card-Level Edit During Study
-
-**Priority:** P1
-**Status:** queued
-
-### Goal
-Allow users to edit the current flashcard inline during a study session without losing their place, so typos and errors can be fixed at the moment of discovery.
-
-### User Stories
-- As a learner, I want to tap an edit icon while studying a card and fix a typo, then return to the same card in the session.
-
-### Acceptance Criteria
-- A floating edit icon appears in the study screen app bar or card area.
-- Tapping it pushes `FlashcardFormScreen` pre-populated with the current card.
-- On save, the session resumes on the same card with the updated content.
-- On cancel, the session resumes unchanged.
-- StudyBloc handles a `CardUpdatedInSession` event to refresh displayed card state.
-
-### Out of Scope
-- Bulk editing during study.
-- Deleting a card during study.
-
----
-
 ## [FEAT-014] AI Card Regeneration
 
 **Priority:** P2

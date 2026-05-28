@@ -170,3 +170,13 @@ Let users set a daily card-study goal and celebrate milestone moments to create 
 
 ### Implementation Notes
 `dailyGoal` (default 10) added to `SettingsState` and persisted via `kDailyGoalKey` in SharedPreferences. `_showGoalDialog` in settings_screen.dart lets the user update the goal. `_DailyGoalBanner` StatefulWidget added to deck_list_screen.dart reads goal + `cardsReviewedToday` from `AnalyticsLoaded` to show a LinearProgressIndicator. `cardsReviewedToday` computed in `AnalyticsBloc` by counting sessions from today. Milestones tracked via six SharedPreferences boolean flags in `notification_prefs_keys.dart`. `_CompletionView` converted to `StatefulWidget` with `ConfettiController`; `_checkMilestones()` in `addPostFrameCallback` reads analytics state + flags, fires confetti on the first newly-hit milestone, then marks it seen. `confetti: ^0.7.0` package added to pubspec.
+
+## [FEAT-013] Card-Level Edit During Study — completed ffa9520
+
+**Priority:** P1
+
+### Goal
+Allow users to edit the current flashcard inline during a study session without losing their place.
+
+### Implementation Notes
+New `EditCardInSession(Flashcard updated)` event added to `study_event.dart`. Handler `_onEditCardInSession` in `StudyBloc` persists via repository, patches `_originalCards` and `_allCardsFlipped` (MC distractor pool), re-applies flip transform for the display copy, then emits updated `StudyInProgress`. Edit icon (`Icons.edit_outlined`) added to `_StudyView` AppBar inside a `BlocBuilder` — visible only during `StudyInProgress`. Tapping opens `_EditCardSheet` modal bottom sheet (un-applies flip for correct canonical pre-fill). Sheet has two `TextFormField`s (Front/Back) with validation, Cancel/Save row. All SM-2 fields are preserved via `copyWith`; only `front`, `back`, `updatedAt` are changed.

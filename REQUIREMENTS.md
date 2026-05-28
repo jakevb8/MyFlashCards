@@ -19,7 +19,7 @@
 | FEAT-010 | Daily Review Reminders         | completed | P0       | 67bdacb |
 | FEAT-011 | Per-Deck Progress Dashboard    | completed | P1       | 53b5305 |
 | FEAT-012 | Study Goals & Milestones       | completed | P1       | d817636 |
-| FEAT-013 | Card-Level Edit During Study   | queued    | P1       | —       |
+| FEAT-013 | Card-Level Edit During Study   | completed | P1       | ffa9520 |
 | FEAT-014 | AI Card Regeneration           | queued    | P2       | —       |
 | FEAT-015 | Deck Tags & Filtering          | queued    | P2       | —       |
 | FEAT-016 | Typing Study Mode              | queued    | P2       | —       |
