@@ -132,23 +132,45 @@ class DeckListScreen extends StatelessWidget {
               if (state.decks.isEmpty) {
                 return _EmptyState();
               }
+              // All unique tags across every deck — used for the filter bar.
+              final allTags = state.decks.expand((d) => d.tags).toSet().toList()
+                ..sort();
+              // Decks to display after applying the active tag filter.
+              final displayedDecks = state.selectedTag == null
+                  ? state.decks
+                  : state.decks
+                        .where((d) => d.tags.contains(state.selectedTag))
+                        .toList();
               return Column(
                 children: [
+                  if (allTags.isNotEmpty)
+                    _TagFilterBar(
+                      allTags: allTags,
+                      selectedTag: state.selectedTag,
+                    ),
                   _StreakBanner(),
                   _DailyGoalBanner(),
                   _SwipeHintBanner(
                     message: 'Swipe left on a deck to edit or delete',
                   ),
                   Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: state.decks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final deck = state.decks[index];
-                        return _DeckTile(deck: deck);
-                      },
-                    ),
+                    child: displayedDecks.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No decks tagged "${state.selectedTag}"',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: displayedDecks.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final deck = displayedDecks[index];
+                              return _DeckTile(deck: deck);
+                            },
+                          ),
                   ),
                 ],
               );
@@ -413,6 +435,25 @@ class _DeckTileState extends State<_DeckTile> {
                   return _DeckProgressRow(stats: snapshot.data!);
                 },
               ),
+              if (widget.deck.tags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: [
+                      for (final tag in widget.deck.tags)
+                        Chip(
+                          label: Text(tag),
+                          labelStyle: Theme.of(context).textTheme.labelSmall,
+                          padding: EdgeInsets.zero,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
+                  ),
+                ),
             ],
           ),
           trailing: const Icon(Icons.chevron_right),
@@ -624,6 +665,48 @@ class _EmptyState extends StatelessWidget {
               color: Theme.of(context).colorScheme.outline,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tag filter bar — horizontal scrollable row of FilterChips
+// ---------------------------------------------------------------------------
+
+/// Shown above the deck list when at least one deck has tags.
+///
+/// "All" clears the filter; each tag chip filters to matching decks.
+class _TagFilterBar extends StatelessWidget {
+  final List<String> allTags;
+  final String? selectedTag;
+
+  const _TagFilterBar({required this.allTags, required this.selectedTag});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        children: [
+          FilterChip(
+            label: const Text('All'),
+            selected: selectedTag == null,
+            onSelected: (_) =>
+                context.read<DeckBloc>().add(const FilterDecksByTag(null)),
+          ),
+          for (final tag in allTags) ...[
+            const SizedBox(width: 8),
+            FilterChip(
+              label: Text(tag),
+              selected: selectedTag == tag,
+              onSelected: (_) =>
+                  context.read<DeckBloc>().add(FilterDecksByTag(tag)),
+            ),
+          ],
         ],
       ),
     );

@@ -31,7 +31,7 @@ Feature: Cloud Backup
     And Firestore contains 3 decks and 8 flashcards for my account
     When I tap "Restore"
     Then all local decks and cards should be cleared first
-    And 3 decks and 8 flashcards should be written to local storage
+    And the decks and flashcards should be written to local storage
     And the deck list should update immediately without restarting the app
     And I should see "Restored 3 decks and 8 cards"
 

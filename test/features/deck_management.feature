@@ -45,3 +45,8 @@ Feature: Deck Management
     Given I have a deck named "French Words" with 3 cards
     When I am on the deck list screen
     Then I should see the hint "swipe left on a deck to edit or delete"
+
+  Scenario: Filter decks by tag
+    Given I have a deck tagged "science" and a deck tagged "history"
+    When I filter by the tag "science"
+    Then I should only see the "science" deck

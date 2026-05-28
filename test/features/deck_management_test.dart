@@ -26,6 +26,10 @@ import './step/i_should_see_a_validation_error.dart';
 import './step/a_deck_is_created_with_a_preassigned_id.dart';
 import './step/the_deck_stored_in_the_repository_should_have_that_same_id.dart';
 import './step/it_should_not_be_replaced_with_a_new_uuid.dart';
+import './step/i_have_a_deck_named_french_words_with3_cards.dart';
+import './step/i_have_a_deck_tagged_science_and_a_deck_tagged_history.dart';
+import './step/i_filter_by_the_tag_science.dart';
+import './step/i_should_only_see_the_science_deck.dart';
 
 void main() {
   group('''Deck Management''', () {
@@ -68,6 +72,16 @@ void main() {
       await aDeckIsCreatedWithAPreassignedId(tester);
       await theDeckStoredInTheRepositoryShouldHaveThatSameId(tester);
       await itShouldNotBeReplacedWithANewUuid(tester);
+    });
+    testWidgets('''Deck tile shows per-deck progress stats''', (tester) async {
+      await iHaveADeckNamedFrenchWordsWith3Cards(tester);
+      await iAmOnTheDeckListScreen(tester);
+      await iShouldSeeTheHintSwipeLeftOnADeckToEditOrDelete(tester);
+    });
+    testWidgets('''Filter decks by tag''', (tester) async {
+      await iHaveADeckTaggedScienceAndADeckTaggedHistory(tester);
+      await iFilterByTheTagScience(tester);
+      await iShouldOnlySeeTheScienceDeck(tester);
     });
   });
 }

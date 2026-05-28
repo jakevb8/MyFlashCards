@@ -5,6 +5,7 @@ Future<void> iHaveADeckNamedFrenchWordsWith3Cards(WidgetTester tester) async {
   resetTestState();
   final deck = makeDeck(name: 'French Words');
   testCurrentDeck = deck;
+  testDeckRepo = FakeDeckRepository([deck]);
   testCardRepo = FakeFlashcardRepository([
     makeCard(deckId: deck.id, front: 'Chat', back: 'Cat'),
     makeCard(deckId: deck.id, front: 'Chien', back: 'Dog'),

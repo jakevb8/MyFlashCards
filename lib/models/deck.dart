@@ -20,12 +20,19 @@ class Deck extends Equatable {
   @HiveField(4)
   final DateTime updatedAt;
 
+  /// User-defined tags (e.g. "spanish", "biology"). Always lowercase.
+  /// Old records missing this field will be read as null by the Hive adapter
+  /// and defaulted to an empty list at construction time.
+  @HiveField(5)
+  final List<String> tags;
+
   const Deck({
     required this.id,
     required this.name,
     this.description = '',
     required this.createdAt,
     required this.updatedAt,
+    this.tags = const [],
   });
 
   Deck copyWith({
@@ -34,6 +41,7 @@ class Deck extends Equatable {
     String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? tags,
   }) {
     return Deck(
       id: id ?? this.id,
@@ -41,6 +49,7 @@ class Deck extends Equatable {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      tags: tags ?? this.tags,
     );
   }
 
@@ -50,6 +59,7 @@ class Deck extends Equatable {
     'description': description,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'tags': tags,
   };
 
   factory Deck.fromJson(Map<String, dynamic> json) => Deck(
@@ -58,8 +68,17 @@ class Deck extends Equatable {
     description: json['description'] as String? ?? '',
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
+    // Handle old JSON without 'tags' field (backups, imports, shared decks).
+    tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
   );
 
   @override
-  List<Object?> get props => [id, name, description, createdAt, updatedAt];
+  List<Object?> get props => [
+    id,
+    name,
+    description,
+    createdAt,
+    updatedAt,
+    tags,
+  ];
 }

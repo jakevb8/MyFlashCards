@@ -169,10 +169,12 @@ Deck makeDeck({
   String? id,
   String name = 'Test Deck',
   String description = '',
+  List<String> tags = const [],
 }) => Deck(
   id: id ?? 'deck-${++_deckCounter}',
   name: name,
   description: description,
+  tags: tags,
   createdAt: _baseDate,
   updatedAt: _baseDate,
 );

@@ -21,7 +21,7 @@ Feature: Deck Sharing via Link
 
   Scenario: User opens a valid share link
     Given another user has shared a deck link
-    When I open the app via the deep link "myflashcards://deck/{shareId}"
+    When I open the app via the deep link "myflashcards://deck/abc123"
     Then I am prompted to import the shared deck
     And the imported deck has fresh spaced-repetition progress
 

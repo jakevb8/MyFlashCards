@@ -13,6 +13,7 @@ class DeckBloc extends Bloc<DeckEvent, DeckState> {
     on<AddDeck>(_onAddDeck);
     on<UpdateDeck>(_onUpdateDeck);
     on<DeleteDeck>(_onDeleteDeck);
+    on<FilterDecksByTag>(_onFilterDecksByTag);
   }
 
   Future<void> _onLoadDecks(LoadDecks event, Emitter<DeckState> emit) async {
@@ -61,5 +62,16 @@ class DeckBloc extends Bloc<DeckEvent, DeckState> {
     } catch (e) {
       emit(DeckError(e.toString()));
     }
+  }
+
+  /// Updates the active tag filter without touching the repository.
+  ///
+  /// [event.tag] == null clears the filter ("All" selected).
+  /// The filtered view is computed in the UI from the full [DeckLoaded.decks]
+  /// list, so this handler is synchronous and never awaits anything.
+  void _onFilterDecksByTag(FilterDecksByTag event, Emitter<DeckState> emit) {
+    if (state is! DeckLoaded) return;
+    final current = state as DeckLoaded;
+    emit(current.copyWith(clearTag: event.tag == null, selectedTag: event.tag));
   }
 }

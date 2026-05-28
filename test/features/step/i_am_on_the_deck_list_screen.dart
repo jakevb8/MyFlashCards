@@ -6,7 +6,6 @@ import '../helpers/test_helpers.dart';
 /// Otherwise the deck list is already on screen.
 Future<void> iAmOnTheDeckListScreen(WidgetTester tester) async {
   if (find.byType(DeckListScreen).evaluate().isEmpty) {
-    resetTestState();
     await tester.pumpWidget(buildDeckListApp());
     await tester.pumpAndSettle();
   }

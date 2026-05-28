@@ -29,3 +29,12 @@ class DeleteDeck extends DeckEvent {
   @override
   List<Object?> get props => [id];
 }
+
+/// Filters the deck list to only show decks with the given [tag].
+/// Pass [tag] = null to clear the filter and show all decks.
+class FilterDecksByTag extends DeckEvent {
+  final String? tag;
+  const FilterDecksByTag(this.tag);
+  @override
+  List<Object?> get props => [tag];
+}
