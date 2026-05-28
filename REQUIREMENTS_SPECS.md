@@ -5,30 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-011] Per-Deck Progress Dashboard
-
-**Priority:** P1
-**Status:** queued
-
-### Goal
-Show at-a-glance progress stats on each deck tile in the deck list screen so users can see which decks need attention and which are nearly mastered — without leaving the home screen.
-
-### User Stories
-- As a learner, I want to see how many cards are due today in each deck, so I know where to focus.
-- As a learner, I want to see how many cards I've mastered (archived) in a deck, so I feel a sense of progress.
-
-### Acceptance Criteria
-- Each deck tile shows: due-today count, total active cards, archived (mastered) count.
-- Stats are computed from local Hive data at deck list load time — no network calls.
-- Zero-due decks show a subtle "all caught up" indicator.
-- No changes to Deck or Flashcard data models required.
-
-### Out of Scope
-- Per-deck historical graphs (separate feature).
-- Sync of stats to Firestore.
-
----
-
 ## [FEAT-012] Study Goals & Milestones
 
 **Priority:** P1

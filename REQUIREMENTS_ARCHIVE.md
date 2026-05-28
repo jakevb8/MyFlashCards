@@ -146,3 +146,17 @@ Surface a local push notification each day when the user has cards due for revie
 `zonedSchedule`. `SettingsBloc` gains `NotificationPrefsLoaded`, `ReminderToggled`,
 `ReminderTimeChanged` events. `FlashcardRepository.countDueCards()` added to interface.
 `main.dart` reschedules on app resume via `_maybeRescheduleReminder()`.
+
+---
+
+## [FEAT-011] Per-Deck Progress Dashboard
+
+**Priority:** P1
+**Status:** completed
+**Commit:** 53b5305
+
+### Goal
+Show at-a-glance progress stats on each deck tile: due-today count, active count, mastered (archived) count.
+
+### Implementation Notes
+`_DeckTile` converted to `StatefulWidget`; `_statsFuture` loads cards via `FlashcardRepository.getFlashcards(deckId)` in `initState()` (once per tile lifecycle, not per rebuild). `_DeckStats.fromCards()` computes three metrics in a single pass. `_DeckProgressRow` renders stat chips with colour-coded icons. Zero-due decks show "All caught up" chip instead of the due count. Also fixed `main.dart` to register `_cardRepo` under both `HiveFlashcardRepository` and `FlashcardRepository` so context.read<FlashcardRepository>() works in production.

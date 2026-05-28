@@ -17,7 +17,7 @@
 | FEAT-008 | Backup V2                      | completed | P1       | 5e40f58 |
 | FEAT-009 | Privacy & Account Management   | completed | P1       | 67e16bd |
 | FEAT-010 | Daily Review Reminders         | completed | P0       | 67bdacb |
-| FEAT-011 | Per-Deck Progress Dashboard    | queued    | P1       | —       |
+| FEAT-011 | Per-Deck Progress Dashboard    | completed | P1       | 53b5305 |
 | FEAT-012 | Study Goals & Milestones       | queued    | P1       | —       |
 | FEAT-013 | Card-Level Edit During Study   | queued    | P1       | —       |
 | FEAT-014 | AI Card Regeneration           | queued    | P2       | —       |
