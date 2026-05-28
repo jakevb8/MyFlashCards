@@ -5,31 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-015] Deck Tags & Filtering
-
-**Priority:** P2
-**Status:** queued
-
-### Goal
-Let users tag decks (e.g. "Spanish", "Biology", "Kids") and filter the deck list by tag, making it easy to navigate a large collection.
-
-### User Stories
-- As a learner, I want to add tags to a deck so I can group related decks together.
-- As a learner, I want to filter the deck list to show only decks with a specific tag.
-
-### Acceptance Criteria
-- `Deck` model gains a `List<String> tags` field (`@HiveField(5)`, nullable/empty-safe for old records).
-- Tag editor in `DeckFormScreen`: chip input with autocomplete from existing tags.
-- Filter chip row above deck list; tapping a chip filters to matching decks; "All" chip clears filter.
-- Tags stored locally in Hive; synced to Firestore `tags` array field when signed in.
-- Migration: existing decks without tags field treated as empty list.
-
-### Out of Scope
-- Nested tags / hierarchy.
-- Tag-based study sessions.
-
----
-
 ## [FEAT-016] Typing Study Mode
 
 **Priority:** P2

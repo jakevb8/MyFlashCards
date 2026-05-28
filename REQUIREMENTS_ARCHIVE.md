@@ -190,3 +190,11 @@ Let users regenerate a single AI-generated flashcard's front/back to be clearer 
 
 ### Implementation Notes
 `RegenerateFlashcard(String id)` event added to `flashcard_event.dart`. `FlashcardLoaded` state extended with `regeneratingIds: Set<String>` (per-card spinner) and `regenerateError: String?` (one-shot error for SnackBar via `BlocListener`). `GeminiDirectService.regenerateCard(front, back)` added to `ai_deck_service.dart` — reuses `_generate()` helper with a targeted prompt. `GeminiKeyService` injected into `FlashcardBloc` (optional, defaults to `GeminiKeyService()`). Handler `_onRegenerateFlashcard` emits spinner → reads key → calls Gemini → persists via repository → reloads. `FlashcardListScreen` checks `GeminiKeyService().hasKey()` in `initState` and passes `hasGeminiKey` + `isRegenerating` to `_CardTile`. `_CardTile` shows a "Rewrite" `SlidableAction` (only when key set) and a `Positioned.fill` spinner overlay when `isRegenerating`. Swipe hint banner text updates to reflect AI capability.
+
+## [FEAT-015] Deck Tags & Filtering — completed ab93772
+
+### Goal
+Let users tag decks (e.g. "Spanish", "Biology", "Kids") and filter the deck list by tag, making it easy to navigate a large collection.
+
+### Implementation Notes
+`Deck` model gains `List<String> tags` at `@HiveField(5)` — existing records read `null` from Hive and default to `const []`. `DeckFormScreen` gets a tag chip input: `InputChip` rows with an `X` button plus a `TextField` that triggers `_addTag()` on Enter/comma. `DeckLoaded` state gains `selectedTag: String?` with `copyWith(clearTag: bool)` sentinel pattern. `FilterDecksByTag(String? tag)` event handled synchronously in `DeckBloc` without a repository call. `DeckListScreen` computes `allTags` and `displayedDecks` from the full list, shows `_TagFilterBar` when any deck has tags, and renders tag chips on each `_DeckTile`. `deck.g.dart` regenerated with null-safe Hive field 5 migration.

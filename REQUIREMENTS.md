@@ -21,6 +21,6 @@
 | FEAT-012 | Study Goals & Milestones       | completed | P1       | d817636 |
 | FEAT-013 | Card-Level Edit During Study   | completed | P1       | ffa9520 |
 | FEAT-014 | AI Card Regeneration           | completed | P2       | 4788f1d |
-| FEAT-015 | Deck Tags & Filtering          | queued    | P2       | —       |
+| FEAT-015 | Deck Tags & Filtering          | completed | P2       | ab93772 |
 | FEAT-016 | Typing Study Mode              | queued    | P2       | —       |
 | FEAT-017 | Deck Collections / Bundled Study | queued  | P3       | —       |
