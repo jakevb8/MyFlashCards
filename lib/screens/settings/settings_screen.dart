@@ -162,6 +162,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Shows a dialog where the user can enter a new daily card-study goal.
+  Future<void> _showGoalDialog(BuildContext context, int currentGoal) async {
+    final controller = TextEditingController(text: '$currentGoal');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Daily Card Goal'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Cards per day',
+            hintText: 'e.g. 20',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = int.tryParse(controller.text.trim());
+              Navigator.pop(ctx, v);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result > 0 && mounted) {
+      _settingsBloc.add(DailyGoalChanged(result));
+    }
+  }
+
   /// Opens the system time picker and dispatches [ReminderTimeChanged] if the
   /// user selects a new time. Safe to call whether or not the reminder is on.
   Future<void> _pickReminderTime(
@@ -313,6 +349,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       );
                     },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ── Study Goals section (always visible) ──────────────────────
+                  _SectionHeader(
+                    label: 'Study Goals',
+                    textTheme: textTheme,
+                    cs: cs,
+                  ),
+
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) => ListTile(
+                      leading: const Icon(Icons.flag_outlined),
+                      title: const Text('Daily Card Goal'),
+                      subtitle: Text('${state.dailyGoal} cards per day'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showGoalDialog(context, state.dailyGoal),
+                    ),
                   ),
 
                   const SizedBox(height: 8),

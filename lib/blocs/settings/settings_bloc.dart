@@ -91,6 +91,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<NotificationPrefsLoaded>(_onNotificationPrefsLoaded);
     on<ReminderToggled>(_onReminderToggled);
     on<ReminderTimeChanged>(_onReminderTimeChanged);
+    on<DailyGoalChanged>(_onDailyGoalChanged);
   }
 
   /// Reads the stored key from secure storage on bloc initialisation.
@@ -196,11 +197,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     }
   }
 
-  /// Loads notification preferences from SharedPreferences into state.
+  /// Loads notification preferences and daily goal from SharedPreferences.
   ///
   /// Called once when the Settings screen opens. Does not schedule anything —
-  /// just reflects the stored preference into the bloc so the UI can render
-  /// the correct toggle and time values.
+  /// just reflects stored preferences into the bloc state for the UI to render.
   Future<void> _onNotificationPrefsLoaded(
     NotificationPrefsLoaded event,
     Emitter<SettingsState> emit,
@@ -209,12 +209,28 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     final enabled = prefs.getBool(kReminderEnabledKey) ?? false;
     final hour = prefs.getInt(kReminderHourKey) ?? 9;
     final minute = prefs.getInt(kReminderMinuteKey) ?? 0;
+    final goal = prefs.getInt(kDailyGoalKey) ?? 10;
     emit(
       state.copyWith(
         reminderEnabled: enabled,
         reminderTime: TimeOfDay(hour: hour, minute: minute),
+        dailyGoal: goal,
       ),
     );
+  }
+
+  /// Updates the daily goal and persists it to SharedPreferences.
+  ///
+  /// Guards against [goal] <= 0 (silently ignores invalid values) so the UI
+  /// can pass any user-entered integer without crashing.
+  Future<void> _onDailyGoalChanged(
+    DailyGoalChanged event,
+    Emitter<SettingsState> emit,
+  ) async {
+    if (event.goal <= 0) return;
+    emit(state.copyWith(dailyGoal: event.goal));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kDailyGoalKey, event.goal);
   }
 
   /// Toggles the daily reminder on or off.

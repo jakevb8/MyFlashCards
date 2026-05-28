@@ -36,17 +36,20 @@ class AnalyticsBloc extends Bloc<AnalyticsEvent, AnalyticsState> {
       int totalReviewed = 0;
       int totalCorrect = 0;
 
+      final today = _localMidnight(DateTime.now());
+      int todayCount = 0;
+
       for (final s in sessions) {
         final day = DateTime(s.date.year, s.date.month, s.date.day);
         countsByDate[day] = (countsByDate[day] ?? 0) + s.cardsReviewed;
         totalReviewed += s.cardsReviewed;
         totalCorrect += s.correctCount;
+        if (day == today) todayCount += s.cardsReviewed;
       }
 
       final accuracy = totalReviewed > 0 ? totalCorrect / totalReviewed : null;
 
       // --- Streak ---
-      final today = _localMidnight(DateTime.now());
       final streak = _computeStreak(countsByDate, today);
 
       // --- Last 7 days (oldest to newest) ---
@@ -61,6 +64,7 @@ class AnalyticsBloc extends Bloc<AnalyticsEvent, AnalyticsState> {
           last7Days: last7Days,
           accuracy: accuracy,
           totalCardsReviewed: totalReviewed,
+          cardsReviewedToday: todayCount,
         ),
       );
     } catch (e) {

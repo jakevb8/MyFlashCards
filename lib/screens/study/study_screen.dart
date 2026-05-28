@@ -1,8 +1,10 @@
 import 'dart:math';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../blocs/analytics/analytics_bloc.dart';
 import '../../blocs/analytics/analytics_event.dart';
+import '../../blocs/analytics/analytics_state.dart';
 import '../../blocs/flashcard/flashcard_bloc.dart';
 import '../../blocs/flashcard/flashcard_event.dart';
 import '../../blocs/flashcard/flashcard_state.dart';
@@ -890,63 +892,142 @@ class _CardFace extends StatelessWidget {
   }
 }
 
-class _CompletionView extends StatelessWidget {
+/// Shown when the user finishes a study session.
+///
+/// On first display it checks whether any study milestone was newly reached
+/// (first session, streak goals, card-count goals, daily goal). If so, it
+/// fires a confetti burst and marks the milestone as seen so the celebration
+/// only fires once.
+class _CompletionView extends StatefulWidget {
   final int totalCards;
   final List<Flashcard> flashcards;
   const _CompletionView({required this.totalCards, required this.flashcards});
 
   @override
+  State<_CompletionView> createState() => _CompletionViewState();
+}
+
+class _CompletionViewState extends State<_CompletionView> {
+  late final ConfettiController _confetti;
+
+  @override
+  void initState() {
+    super.initState();
+    _confetti = ConfettiController(duration: const Duration(seconds: 3));
+    // Defer milestone check until after the first frame so we can safely read
+    // context (BlocProvider, etc.) from initState via addPostFrameCallback.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMilestones());
+  }
+
+  @override
+  void dispose() {
+    _confetti.dispose();
+    super.dispose();
+  }
+
+  /// Checks each milestone condition. For the first newly-hit milestone it
+  /// fires confetti and marks the milestone seen. We stop after the first to
+  /// avoid stacking multiple celebrations.
+  Future<void> _checkMilestones() async {
+    final analyticsState = context.read<AnalyticsBloc>().state;
+    if (analyticsState is! AnalyticsLoaded) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    final checks = <String, bool>{
+      // First-ever session completed.
+      kMilestoneFirstSession: true,
+      // 7-day streak reached.
+      kMilestoneStreak7: analyticsState.streak >= 7,
+      // 30-day streak reached.
+      kMilestoneStreak30: analyticsState.streak >= 30,
+      // Cumulative 50 cards reviewed.
+      kMilestoneCards50: analyticsState.totalCardsReviewed >= 50,
+      // Cumulative 100 cards reviewed.
+      kMilestoneCards100: analyticsState.totalCardsReviewed >= 100,
+      // Daily goal met today.
+      kMilestoneDailyGoal:
+          analyticsState.cardsReviewedToday >=
+          (prefs.getInt(kDailyGoalKey) ?? 10),
+    };
+
+    for (final entry in checks.entries) {
+      final key = entry.key;
+      final conditionMet = entry.value;
+      final alreadySeen = prefs.getBool(key) ?? false;
+      if (conditionMet && !alreadySeen) {
+        await prefs.setBool(key, true);
+        if (mounted) _confetti.play();
+        return; // celebrate the first newly-hit milestone only
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              size: 80,
-              color: Colors.green,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Session Complete!',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You reviewed $totalCards card${totalCards == 1 ? '' : 's'}.',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 32),
-            Row(
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        // Confetti falls from the top-centre of the screen.
+        ConfettiWidget(
+          confettiController: _confetti,
+          blastDirectionality: BlastDirectionality.explosive,
+          numberOfParticles: 30,
+          gravity: 0.2,
+          shouldLoop: false,
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton.icon(
-                  onPressed: () => context.read<StudyBloc>().add(
-                    const RestartSession(randomize: false),
-                  ),
-                  icon: const Icon(Icons.replay),
-                  label: const Text('Restart'),
+                const Icon(
+                  Icons.check_circle_outline,
+                  size: 80,
+                  color: Colors.green,
                 ),
-                const SizedBox(width: 16),
-                FilledButton.icon(
-                  onPressed: () => context.read<StudyBloc>().add(
-                    const RestartSession(randomize: true),
-                  ),
-                  icon: const Icon(Icons.shuffle),
-                  label: const Text('Shuffle & Retry'),
+                const SizedBox(height: 16),
+                Text(
+                  'Session Complete!',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You reviewed ${widget.totalCards} card${widget.totalCards == 1 ? '' : 's'}.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => context.read<StudyBloc>().add(
+                        const RestartSession(randomize: false),
+                      ),
+                      icon: const Icon(Icons.replay),
+                      label: const Text('Restart'),
+                    ),
+                    const SizedBox(width: 16),
+                    FilledButton.icon(
+                      onPressed: () => context.read<StudyBloc>().add(
+                        const RestartSession(randomize: true),
+                      ),
+                      icon: const Icon(Icons.shuffle),
+                      label: const Text('Shuffle & Retry'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Back to Deck'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Back to Deck'),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

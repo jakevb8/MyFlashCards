@@ -55,6 +55,10 @@ class SettingsState extends Equatable {
   /// Cleared to null on the next successful notification operation.
   final String? notificationError;
 
+  /// The user's daily card-study target. Displayed as a progress indicator on
+  /// the deck list screen. Defaults to 10 cards.
+  final int dailyGoal;
+
   const SettingsState({
     this.draftKey = '',
     this.geminiKeyStatus = GeminiKeyStatus.unknown,
@@ -64,6 +68,7 @@ class SettingsState extends Equatable {
     this.reminderTime = const TimeOfDay(hour: 9, minute: 0),
     this.isScheduling = false,
     this.notificationError,
+    this.dailyGoal = 10,
   });
 
   /// Returns a new [SettingsState] with only the specified fields replaced.
@@ -77,6 +82,7 @@ class SettingsState extends Equatable {
     TimeOfDay? reminderTime,
     bool? isScheduling,
     Object? notificationError = _sentinel,
+    int? dailyGoal,
   }) {
     return SettingsState(
       draftKey: draftKey ?? this.draftKey,
@@ -91,6 +97,7 @@ class SettingsState extends Equatable {
       notificationError: notificationError == _sentinel
           ? this.notificationError
           : notificationError as String?,
+      dailyGoal: dailyGoal ?? this.dailyGoal,
     );
   }
 
@@ -104,6 +111,7 @@ class SettingsState extends Equatable {
     reminderTime,
     isScheduling,
     notificationError,
+    dailyGoal,
   ];
 }
 

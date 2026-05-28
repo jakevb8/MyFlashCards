@@ -67,3 +67,11 @@ class ReminderTimeChanged extends SettingsEvent {
   final TimeOfDay time;
   ReminderTimeChanged(this.time);
 }
+
+/// Dispatched when the user changes their daily card-study goal.
+///
+/// [goal] must be > 0. The bloc persists the new value to SharedPreferences.
+class DailyGoalChanged extends SettingsEvent {
+  final int goal;
+  DailyGoalChanged(this.goal);
+}

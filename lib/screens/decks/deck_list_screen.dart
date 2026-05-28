@@ -11,6 +11,8 @@ import '../../blocs/deck_sharing/deck_sharing_state.dart';
 import '../../blocs/import_export/import_export_bloc.dart';
 import '../../blocs/import_export/import_export_event.dart';
 import '../../blocs/import_export/import_export_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/notification_prefs_keys.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../../repositories/flashcard_repository.dart';
@@ -133,6 +135,7 @@ class DeckListScreen extends StatelessWidget {
               return Column(
                 children: [
                   _StreakBanner(),
+                  _DailyGoalBanner(),
                   _SwipeHintBanner(
                     message: 'Swipe left on a deck to edit or delete',
                   ),
@@ -204,6 +207,95 @@ class _StreakBanner extends StatelessWidget {
                   Icons.chevron_right,
                   size: 16,
                   color: cs.onPrimaryContainer,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Goal progress banner shown below the streak banner.
+///
+/// Reads [cardsReviewedToday] from [AnalyticsBloc] and the daily goal from
+/// SharedPreferences. Hidden when the goal is not set or analytics are loading.
+/// Tapping navigates to the analytics screen.
+class _DailyGoalBanner extends StatefulWidget {
+  @override
+  State<_DailyGoalBanner> createState() => _DailyGoalBannerState();
+}
+
+class _DailyGoalBannerState extends State<_DailyGoalBanner> {
+  int _dailyGoal = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoal();
+  }
+
+  Future<void> _loadGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() => _dailyGoal = prefs.getInt(kDailyGoalKey) ?? 10);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AnalyticsBloc, AnalyticsState>(
+      builder: (context, state) {
+        if (state is! AnalyticsLoaded) return const SizedBox.shrink();
+        final reviewed = state.cardsReviewedToday;
+        final goal = _dailyGoal;
+        final progress = (reviewed / goal).clamp(0.0, 1.0);
+        final done = reviewed >= goal;
+        final cs = Theme.of(context).colorScheme;
+        return InkWell(
+          onTap: () => Navigator.pushNamed(context, '/analytics'),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: cs.secondaryContainer,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      done ? Icons.check_circle : Icons.flag_outlined,
+                      size: 16,
+                      color: done ? cs.secondary : cs.onSecondaryContainer,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      done
+                          ? 'Daily goal reached! ($reviewed / $goal)'
+                          : '$reviewed / $goal cards today',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: cs.onSecondaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: cs.onSecondaryContainer,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: cs.secondary.withAlpha(40),
+                    color: done ? cs.secondary : cs.secondary,
+                    minHeight: 4,
+                  ),
                 ),
               ],
             ),

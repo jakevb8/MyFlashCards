@@ -34,15 +34,26 @@ class AnalyticsLoaded extends AnalyticsState {
   /// Total cards reviewed across all sessions.
   final int totalCardsReviewed;
 
+  /// Cards reviewed in today's calendar day (sum of all sessions today).
+  /// Used by the daily goal progress indicator on the deck list screen.
+  final int cardsReviewedToday;
+
   const AnalyticsLoaded({
     required this.streak,
     required this.last7Days,
     required this.accuracy,
     required this.totalCardsReviewed,
+    required this.cardsReviewedToday,
   });
 
   @override
-  List<Object?> get props => [streak, last7Days, accuracy, totalCardsReviewed];
+  List<Object?> get props => [
+    streak,
+    last7Days,
+    accuracy,
+    totalCardsReviewed,
+    cardsReviewedToday,
+  ];
 }
 
 class AnalyticsError extends AnalyticsState {
