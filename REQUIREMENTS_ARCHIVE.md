@@ -160,3 +160,13 @@ Show at-a-glance progress stats on each deck tile: due-today count, active count
 
 ### Implementation Notes
 `_DeckTile` converted to `StatefulWidget`; `_statsFuture` loads cards via `FlashcardRepository.getFlashcards(deckId)` in `initState()` (once per tile lifecycle, not per rebuild). `_DeckStats.fromCards()` computes three metrics in a single pass. `_DeckProgressRow` renders stat chips with colour-coded icons. Zero-due decks show "All caught up" chip instead of the due count. Also fixed `main.dart` to register `_cardRepo` under both `HiveFlashcardRepository` and `FlashcardRepository` so context.read<FlashcardRepository>() works in production.
+
+## [FEAT-012] Study Goals & Milestones — completed d817636
+
+**Priority:** P1
+
+### Goal
+Let users set a daily card-study goal and celebrate milestone moments to create a stronger motivational feedback loop.
+
+### Implementation Notes
+`dailyGoal` (default 10) added to `SettingsState` and persisted via `kDailyGoalKey` in SharedPreferences. `_showGoalDialog` in settings_screen.dart lets the user update the goal. `_DailyGoalBanner` StatefulWidget added to deck_list_screen.dart reads goal + `cardsReviewedToday` from `AnalyticsLoaded` to show a LinearProgressIndicator. `cardsReviewedToday` computed in `AnalyticsBloc` by counting sessions from today. Milestones tracked via six SharedPreferences boolean flags in `notification_prefs_keys.dart`. `_CompletionView` converted to `StatefulWidget` with `ConfettiController`; `_checkMilestones()` in `addPostFrameCallback` reads analytics state + flags, fires confetti on the first newly-hit milestone, then marks it seen. `confetti: ^0.7.0` package added to pubspec.

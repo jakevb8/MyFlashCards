@@ -5,32 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-012] Study Goals & Milestones
-
-**Priority:** P1
-**Status:** queued
-
-### Goal
-Let users set a daily card-study goal and celebrate milestone moments (first deck mastered, 100-card streak, etc.) to create a stronger motivational feedback loop.
-
-### User Stories
-- As a learner, I want to set a daily goal (e.g. study 20 cards), so I have a concrete target.
-- As a learner, I want to see my progress toward today's goal on the home screen.
-- As a learner, I want a celebration moment when I hit a milestone, so studying feels rewarding.
-
-### Acceptance Criteria
-- Daily goal configurable in Settings (integer, default 10 cards).
-- Home screen shows a progress bar or chip: "12 / 20 today".
-- Milestones detected: first session completed, 7-day streak, 30-day streak, 50 cards mastered, 100 cards mastered, first deck fully mastered.
-- Celebration shown as confetti overlay on session-complete screen when a milestone is hit.
-- Milestone state persisted in `shared_preferences` (don't re-trigger seen milestones).
-
-### Out of Scope
-- Social / leaderboard sharing of milestones.
-- Custom milestone definitions.
-
----
-
 ## [FEAT-013] Card-Level Edit During Study
 
 **Priority:** P1
