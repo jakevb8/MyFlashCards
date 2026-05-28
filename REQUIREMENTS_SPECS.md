@@ -5,32 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-014] AI Card Regeneration
-
-**Priority:** P2
-**Status:** queued
-
-### Goal
-Let users regenerate a single AI-generated flashcard that is vague, wrong, or poorly worded, using Gemini — turning AI generation from a one-shot output into a collaborative draft.
-
-### User Stories
-- As a learner, I want to swipe a card and tap "Regenerate" to get a better AI-written version of that card.
-- As a learner, I want the regenerated card to replace the old one in-place.
-
-### Acceptance Criteria
-- "Regenerate" swipe action added to `FlashcardListScreen` alongside Edit and Delete.
-- Only visible when a Gemini API key is saved; shows key-required snackbar otherwise.
-- Gemini prompt: rewrite the given front/back to be clearer and more concise.
-- Loading spinner shown on the card tile during generation.
-- On success, card is updated in Hive (and Firestore if signed in).
-- On failure, error snackbar shown; original card unchanged.
-
-### Out of Scope
-- Regenerating all cards in a deck at once.
-- Choosing from multiple regenerated options.
-
----
-
 ## [FEAT-015] Deck Tags & Filtering
 
 **Priority:** P2

@@ -180,3 +180,13 @@ Allow users to edit the current flashcard inline during a study session without 
 
 ### Implementation Notes
 New `EditCardInSession(Flashcard updated)` event added to `study_event.dart`. Handler `_onEditCardInSession` in `StudyBloc` persists via repository, patches `_originalCards` and `_allCardsFlipped` (MC distractor pool), re-applies flip transform for the display copy, then emits updated `StudyInProgress`. Edit icon (`Icons.edit_outlined`) added to `_StudyView` AppBar inside a `BlocBuilder` — visible only during `StudyInProgress`. Tapping opens `_EditCardSheet` modal bottom sheet (un-applies flip for correct canonical pre-fill). Sheet has two `TextFormField`s (Front/Back) with validation, Cancel/Save row. All SM-2 fields are preserved via `copyWith`; only `front`, `back`, `updatedAt` are changed.
+
+## [FEAT-014] AI Card Regeneration — completed 4788f1d
+
+**Priority:** P2
+
+### Goal
+Let users regenerate a single AI-generated flashcard's front/back to be clearer and more concise using Gemini.
+
+### Implementation Notes
+`RegenerateFlashcard(String id)` event added to `flashcard_event.dart`. `FlashcardLoaded` state extended with `regeneratingIds: Set<String>` (per-card spinner) and `regenerateError: String?` (one-shot error for SnackBar via `BlocListener`). `GeminiDirectService.regenerateCard(front, back)` added to `ai_deck_service.dart` — reuses `_generate()` helper with a targeted prompt. `GeminiKeyService` injected into `FlashcardBloc` (optional, defaults to `GeminiKeyService()`). Handler `_onRegenerateFlashcard` emits spinner → reads key → calls Gemini → persists via repository → reloads. `FlashcardListScreen` checks `GeminiKeyService().hasKey()` in `initState` and passes `hasGeminiKey` + `isRegenerating` to `_CardTile`. `_CardTile` shows a "Rewrite" `SlidableAction` (only when key set) and a `Positioned.fill` spinner overlay when `isRegenerating`. Swipe hint banner text updates to reflect AI capability.
