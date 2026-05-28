@@ -9,6 +9,7 @@ import '../../blocs/import_export/import_export_event.dart';
 import '../../blocs/import_export/import_export_state.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
+import '../../services/gemini_key_service.dart';
 import '../study/study_screen.dart';
 import '../study/study_mode_picker_sheet.dart';
 import 'flashcard_form_screen.dart';
@@ -23,32 +24,62 @@ class FlashcardListScreen extends StatefulWidget {
 }
 
 class _FlashcardListScreenState extends State<FlashcardListScreen> {
+  bool _hasGeminiKey = false;
+
   @override
   void initState() {
     super.initState();
     context.read<FlashcardBloc>().add(LoadFlashcards(widget.deck.id));
+    _checkGeminiKey();
+  }
+
+  Future<void> _checkGeminiKey() async {
+    final has = await GeminiKeyService().hasKey();
+    if (mounted) setState(() => _hasGeminiKey = has);
   }
 
   Deck get deck => widget.deck;
 
   @override
   Widget build(BuildContext context) {
-    // Show export success/error feedback as a SnackBar.
-    return BlocListener<ImportExportBloc, ImportExportState>(
-      listener: (context, state) {
-        if (state is ImportExportSuccess) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
-        } else if (state is ImportExportError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        // Show export success/error feedback as a SnackBar.
+        BlocListener<ImportExportBloc, ImportExportState>(
+          listener: (context, state) {
+            if (state is ImportExportSuccess) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+            } else if (state is ImportExportError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+        ),
+        // Show AI regeneration errors as a SnackBar.
+        BlocListener<FlashcardBloc, FlashcardState>(
+          listenWhen: (prev, curr) =>
+              curr is FlashcardLoaded &&
+              curr.regenerateError != null &&
+              (prev is! FlashcardLoaded ||
+                  prev.regenerateError != curr.regenerateError),
+          listener: (context, state) {
+            if (state is FlashcardLoaded && state.regenerateError != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.regenerateError!),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         appBar: AppBar(
           title: Text(deck.name),
@@ -133,7 +164,9 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
               return Column(
                 children: [
                   _SwipeHintBanner(
-                    message: 'Swipe left on a card to edit or delete',
+                    message: _hasGeminiKey
+                        ? 'Swipe left to edit, rewrite with AI, or delete'
+                        : 'Swipe left on a card to edit or delete',
                   ),
                   Expanded(
                     child: ListView(
@@ -142,7 +175,14 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                         for (final card in active)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: _CardTile(card: card, deck: deck),
+                            child: _CardTile(
+                              card: card,
+                              deck: deck,
+                              hasGeminiKey: _hasGeminiKey,
+                              isRegenerating: state.regeneratingIds.contains(
+                                card.id,
+                              ),
+                            ),
                           ),
                         if (archived.isNotEmpty) ...[
                           const SizedBox(height: 8),
@@ -177,7 +217,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
           label: const Text('Add Card'),
         ),
       ), // Scaffold
-    ); // BlocListener
+    ); // MultiBlocListener
   }
 
   Future<void> _pickModeAndStudy(
@@ -207,7 +247,15 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
 class _CardTile extends StatelessWidget {
   final Flashcard card;
   final Deck deck;
-  const _CardTile({required this.card, required this.deck});
+  final bool hasGeminiKey;
+  final bool isRegenerating;
+
+  const _CardTile({
+    required this.card,
+    required this.deck,
+    this.hasGeminiKey = false,
+    this.isRegenerating = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -235,6 +283,19 @@ class _CardTile extends StatelessWidget {
               left: Radius.circular(12),
             ),
           ),
+          if (hasGeminiKey)
+            SlidableAction(
+              // Disable tap while an AI call is already in-flight for this card.
+              onPressed: isRegenerating
+                  ? null
+                  : (_) => context.read<FlashcardBloc>().add(
+                      RegenerateFlashcard(card.id),
+                    ),
+              backgroundColor: colorScheme.tertiary,
+              foregroundColor: colorScheme.onTertiary,
+              icon: Icons.auto_awesome,
+              label: 'Rewrite',
+            ),
           SlidableAction(
             onPressed: (_) {
               context.read<FlashcardBloc>().add(DeleteFlashcard(card.id));
@@ -249,62 +310,76 @@ class _CardTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Stack(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.front_hand_outlined,
-                    size: 16,
-                    color: colorScheme.primary,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.front_hand_outlined,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Front',
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      _StarButton(card: card),
+                    ],
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(height: 4),
                   Text(
-                    'Front',
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                    card.front,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  const Spacer(),
-                  // ── Star progress ─────────────────────────────────────
-                  _StarButton(card: card),
+                  const Divider(height: 16),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.flip_outlined,
+                        size: 16,
+                        color: colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Back',
+                        style: TextStyle(
+                          color: colorScheme.secondary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(card.back),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                card.front,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const Divider(height: 16),
-              Row(
-                children: [
-                  Icon(
-                    Icons.flip_outlined,
-                    size: 16,
-                    color: colorScheme.secondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Back',
-                    style: TextStyle(
-                      color: colorScheme.secondary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(card.back),
-            ],
+            ),
           ),
-        ),
+          // Per-card spinner overlay while an AI rewrite is in-flight.
+          if (isRegenerating)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
       ),
     );
   }

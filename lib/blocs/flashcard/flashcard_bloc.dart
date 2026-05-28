@@ -1,15 +1,21 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/flashcard.dart';
 import '../../repositories/flashcard_repository.dart';
+import '../../services/ai_deck_service.dart';
+import '../../services/gemini_key_service.dart';
 import 'flashcard_event.dart';
 import 'flashcard_state.dart';
 
 class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
   final FlashcardRepository repository;
+  final GeminiKeyService _keyService;
   final _uuid = const Uuid();
   String? _currentDeckId;
 
-  FlashcardBloc({required this.repository}) : super(FlashcardInitial()) {
+  FlashcardBloc({required this.repository, GeminiKeyService? keyService})
+    : _keyService = keyService ?? GeminiKeyService(),
+      super(FlashcardInitial()) {
     on<LoadFlashcards>(_onLoadFlashcards);
     on<AddFlashcard>(_onAddFlashcard);
     on<AddFlashcards>(_onAddFlashcards);
@@ -17,6 +23,7 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
     on<DeleteFlashcard>(_onDeleteFlashcard);
     on<StarCard>(_onStarCard);
     on<UnarchiveCard>(_onUnarchiveCard);
+    on<RegenerateFlashcard>(_onRegenerateFlashcard);
   }
 
   Future<void> _onLoadFlashcards(
@@ -151,6 +158,91 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
       }
     } catch (e) {
       emit(FlashcardError(e.toString()));
+    }
+  }
+
+  /// Rewrites a card's front and back using Gemini.
+  ///
+  /// Shows a per-card spinner via [FlashcardLoaded.regeneratingIds] while the
+  /// AI call is in-flight. On success the card is updated in storage and the
+  /// list is reloaded. On failure [FlashcardLoaded.regenerateError] carries the
+  /// message for the UI's BlocListener to surface as a SnackBar.
+  Future<void> _onRegenerateFlashcard(
+    RegenerateFlashcard event,
+    Emitter<FlashcardState> emit,
+  ) async {
+    final current = state;
+    if (current is! FlashcardLoaded) return;
+
+    // Show per-card spinner.
+    emit(
+      current.copyWith(
+        regeneratingIds: {...current.regeneratingIds, event.id},
+        regenerateError: null,
+      ),
+    );
+
+    try {
+      final apiKey = await _keyService.readKey();
+      if (apiKey == null || apiKey.isEmpty) {
+        final remaining = Set<String>.from(
+          (state as FlashcardLoaded).regeneratingIds,
+        )..remove(event.id);
+        emit(
+          (state as FlashcardLoaded).copyWith(
+            regeneratingIds: remaining,
+            regenerateError: 'No Gemini API key saved. Add one in Settings.',
+          ),
+        );
+        return;
+      }
+
+      final card = current.flashcards.firstWhere(
+        (c) => c.id == event.id,
+        orElse: () => throw StateError('Card not found in state'),
+      );
+
+      final suggestion = await GeminiDirectService(
+        apiKey,
+      ).regenerateCard(card.front, card.back);
+
+      final updated = card.copyWith(
+        front: suggestion.front,
+        back: suggestion.back,
+        updatedAt: DateTime.now(),
+      );
+      await repository.updateFlashcard(updated);
+
+      if (_currentDeckId != null) {
+        final cards = await repository.getFlashcards(_currentDeckId!);
+        // Read latest state in case another event fired concurrently.
+        final latestIds = state is FlashcardLoaded
+            ? Set<String>.from((state as FlashcardLoaded).regeneratingIds)
+            : <String>{};
+        latestIds.remove(event.id);
+        emit(FlashcardLoaded(cards, regeneratingIds: latestIds));
+      }
+    } catch (e) {
+      // Restore spinner-free state and surface the error.
+      final latestState = state;
+      final remaining = latestState is FlashcardLoaded
+          ? (Set<String>.from(latestState.regeneratingIds)..remove(event.id))
+          : <String>{};
+      List<Flashcard> cards;
+      try {
+        cards = _currentDeckId != null
+            ? await repository.getFlashcards(_currentDeckId!)
+            : (latestState is FlashcardLoaded ? latestState.flashcards : []);
+      } catch (_) {
+        cards = latestState is FlashcardLoaded ? latestState.flashcards : [];
+      }
+      emit(
+        FlashcardLoaded(
+          cards,
+          regeneratingIds: remaining,
+          regenerateError: 'Rewrite failed: ${e.toString()}',
+        ),
+      );
     }
   }
 }

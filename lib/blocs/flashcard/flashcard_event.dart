@@ -60,3 +60,16 @@ class UnarchiveCard extends FlashcardEvent {
   @override
   List<Object?> get props => [id];
 }
+
+/// Rewrite a card's front and back using the Gemini API.
+///
+/// Only has an effect when a Gemini API key is saved in secure storage.
+/// On completion the card is updated in place; the session card list is
+/// refreshed. On failure a [FlashcardLoaded.regenerateError] is emitted for
+/// the UI to surface as a SnackBar.
+class RegenerateFlashcard extends FlashcardEvent {
+  final String id;
+  const RegenerateFlashcard(this.id);
+  @override
+  List<Object?> get props => [id];
+}

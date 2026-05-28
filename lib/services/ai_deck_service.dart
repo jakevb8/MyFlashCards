@@ -82,6 +82,25 @@ $trimmed
     return _generate(prompt);
   }
 
+  /// Rewrites a single card's front and back to be clearer and more concise.
+  ///
+  /// Returns the first (and only) [CardSuggestion] from the AI response.
+  /// Throws on empty/invalid response or network failure.
+  Future<CardSuggestion> regenerateCard(String front, String back) async {
+    final prompt =
+        '''
+Rewrite this flashcard to be clearer and more concise.
+Front: $front
+Back: $back
+
+Return ONLY a valid JSON array with exactly one item:
+[{"front": "...", "back": "..."}]
+''';
+    final results = await _generate(prompt);
+    if (results.isEmpty) throw Exception('AI returned no card');
+    return results.first;
+  }
+
   Future<List<CardSuggestion>> _generate(String prompt) async {
     final response = await _model.generateContent([Content.text(prompt)]);
     final raw = response.text;
