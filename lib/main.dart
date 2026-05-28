@@ -28,9 +28,11 @@ import 'screens/decks/deck_list_screen.dart';
 import 'screens/backup/backup_screen.dart';
 import 'screens/generate/ai_generate_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'core/notification_prefs_keys.dart';
 import 'services/deck_import_export_service.dart';
 import 'services/deck_sharing_service.dart';
 import 'services/firebase_backup_service.dart';
+import 'services/notification_service.dart';
 
 // SharedPreferences key tracking when the last auto-backup ran.
 // Stored locally so the 23-hour check works without a network round-trip.
@@ -77,6 +79,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
   final _sessionRepo = HiveStudySessionRepository();
   final _backupService = FirebaseBackupService();
   final _sharingService = DeckSharingService();
+  final _notificationService = NotificationService();
 
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
@@ -98,6 +101,11 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     _deckSharingBloc = DeckSharingBloc(service: _sharingService);
     WidgetsBinding.instance.addObserver(this);
     _initDeepLinks();
+    // Initialise the notification plugin. Fire-and-forget — init failure is
+    // non-fatal and will surface as a NotificationServiceException only when
+    // the user tries to enable reminders.
+    _notificationService.init();
+    _maybeRescheduleReminder();
   }
 
   /// Wires up the AppLinks listener for deck-share deep links.
@@ -143,11 +151,14 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     super.dispose();
   }
 
-  /// Fires on every app resume. Triggers a silent backup if the user is signed
-  /// in (non-anonymous) and the last auto-backup was more than 23 hours ago.
+  /// Fires on every app resume. Triggers a silent backup and reschedules the
+  /// daily reminder so the due-card count stays accurate after returning.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _maybeAutoBackup();
+    if (state == AppLifecycleState.resumed) {
+      _maybeAutoBackup();
+      _maybeRescheduleReminder();
+    }
   }
 
   Future<void> _maybeAutoBackup() async {
@@ -183,6 +194,27 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
     }
   }
 
+  /// Reschedules the daily reminder with a fresh due-card count if reminders
+  /// are enabled. Called on app start and every time the app resumes so the
+  /// notification body stays accurate after the user studies or cards become due.
+  Future<void> _maybeRescheduleReminder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(kReminderEnabledKey) ?? false;
+    if (!enabled) return;
+    final hour = prefs.getInt(kReminderHourKey) ?? 9;
+    final minute = prefs.getInt(kReminderMinuteKey) ?? 0;
+    final dueCount = await _cardRepo.countDueCards();
+    try {
+      await _notificationService.scheduleDailyReminder(
+        time: TimeOfDay(hour: hour, minute: minute),
+        dueCount: dueCount,
+      );
+    } on NotificationServiceException {
+      // Best-effort on resume — silent fail so the app never blocks on a
+      // notification error.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
@@ -190,6 +222,7 @@ class _MyFlashCardsAppState extends State<MyFlashCardsApp>
         RepositoryProvider.value(value: _deckRepo),
         RepositoryProvider.value(value: _cardRepo),
         RepositoryProvider.value(value: _sessionRepo),
+        RepositoryProvider.value(value: _notificationService),
       ],
       child: MultiBlocProvider(
         providers: [

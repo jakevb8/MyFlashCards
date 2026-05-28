@@ -30,6 +30,7 @@ import 'package:my_flash_cards/screens/decks/deck_list_screen.dart';
 import 'package:my_flash_cards/screens/study/study_screen.dart';
 import 'package:my_flash_cards/services/deck_import_export_service.dart';
 import 'package:my_flash_cards/services/deck_sharing_service.dart';
+import 'package:my_flash_cards/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Module-level shared state ─────────────────────────────────────────────────
@@ -111,7 +112,38 @@ class FakeFlashcardRepository implements FlashcardRepository {
   Future<void> deleteFlashcard(String id) async =>
       _store.removeWhere((c) => c.id == id);
 
+  @override
+  Future<int> countDueCards() async {
+    final now = DateTime.now();
+    return _store
+        .where(
+          (c) =>
+              !c.archived &&
+              (c.nextReviewAt == null || !c.nextReviewAt!.isAfter(now)),
+        )
+        .length;
+  }
+
   List<Flashcard> get all => List.unmodifiable(_store);
+}
+
+/// No-op notification service for widget tests — never actually schedules
+/// anything so tests are not coupled to the notification plugin.
+class FakeNotificationService extends NotificationService {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<void> scheduleDailyReminder({
+    required TimeOfDay time,
+    required int dueCount,
+  }) async {}
+
+  @override
+  Future<void> cancelDailyReminder() async {}
 }
 
 class FakeStudySessionRepository implements StudySessionRepository {
@@ -294,6 +326,11 @@ Widget buildStudyApp({
     providers: [
       RepositoryProvider<FlashcardRepository>.value(value: cr),
       RepositoryProvider<StudySessionRepository>.value(value: sr),
+      // FakeNotificationService so the post-session reschedule listener works
+      // without requiring the real notification plugin in widget tests.
+      RepositoryProvider<NotificationService>.value(
+        value: FakeNotificationService(),
+      ),
     ],
     child: MultiBlocProvider(
       providers: [

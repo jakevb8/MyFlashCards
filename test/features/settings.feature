@@ -61,3 +61,20 @@ Feature: Settings
   Scenario: App version is shown in About section
     Given I am on the Settings screen
     Then I should see a version number in the About section
+
+Feature: Daily Review Reminders
+
+  Scenario: Enable daily reminder
+    Given I am on the Settings screen
+    When I toggle the daily reminder on
+    Then the reminder should be scheduled at the default time
+
+  Scenario: Change reminder time
+    Given I am on the Settings screen with reminders enabled
+    When I change the reminder time to 8:00 AM
+    Then the reminder should be rescheduled at 8:00 AM
+
+  Scenario: Disable daily reminder
+    Given I am on the Settings screen with reminders enabled
+    When I toggle the daily reminder off
+    Then the reminder should be cancelled

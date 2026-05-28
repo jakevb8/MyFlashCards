@@ -27,6 +27,23 @@ class HiveFlashcardRepository implements FlashcardRepository {
   }
 
   @override
+  /// Returns the count of non-archived cards that are currently due for review.
+  ///
+  /// A card is due when [Flashcard.nextReviewAt] is null (new, never reviewed)
+  /// or is not after [DateTime.now()]. Used by the notification service to
+  /// populate the reminder body without loading all card data into memory.
+  Future<int> countDueCards() async {
+    final now = DateTime.now();
+    return _box.values
+        .where(
+          (c) =>
+              !c.archived &&
+              (c.nextReviewAt == null || !c.nextReviewAt!.isAfter(now)),
+        )
+        .length;
+  }
+
+  @override
   Future<Flashcard> getFlashcard(String id) async {
     return _box.values.firstWhere((c) => c.id == id);
   }

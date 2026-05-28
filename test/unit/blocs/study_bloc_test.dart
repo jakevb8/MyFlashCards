@@ -50,6 +50,18 @@ class FakeFlashcardRepository implements FlashcardRepository {
   @override
   Future<void> deleteFlashcard(String id) async =>
       _store.removeWhere((c) => c.id == id);
+
+  @override
+  Future<int> countDueCards() async {
+    final now = DateTime.now();
+    return _store
+        .where(
+          (c) =>
+              !c.archived &&
+              (c.nextReviewAt == null || !c.nextReviewAt!.isAfter(now)),
+        )
+        .length;
+  }
 }
 
 List<Flashcard> makeCards(int count) {

@@ -72,8 +72,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _settingsBloc = SettingsBloc();
-    // Hydrate the bloc from secure storage immediately on screen open.
+    // Hydrate the bloc from secure storage / SharedPreferences immediately on open.
     _settingsBloc.add(GeminiKeyLoaded());
+    _settingsBloc.add(NotificationPrefsLoaded());
   }
 
   @override
@@ -161,6 +162,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Opens the system time picker and dispatches [ReminderTimeChanged] if the
+  /// user selects a new time. Safe to call whether or not the reminder is on.
+  Future<void> _pickReminderTime(
+    BuildContext context,
+    TimeOfDay current,
+  ) async {
+    final picked = await showTimePicker(context: context, initialTime: current);
+    if (picked != null && mounted) {
+      _settingsBloc.add(ReminderTimeChanged(picked));
+    }
+  }
+
   /// Opens the Gemini API key bottom sheet.
   ///
   /// The sheet reads from and writes to [_settingsBloc], which is provided via
@@ -188,129 +201,190 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return BlocProvider.value(
       value: _settingsBloc,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Settings')),
-        body: Stack(
-          children: [
-            ListView(
-              children: [
-                // ── AI Settings section (always visible) ──────────────────────
-                _SectionHeader(
-                  label: 'AI Settings',
-                  textTheme: textTheme,
-                  cs: cs,
-                ),
-
-                // Key status tile — shows masked status, never the raw key.
-                BlocBuilder<SettingsBloc, SettingsState>(
-                  builder: (context, state) {
-                    final String subtitle;
-                    if (state.geminiKeyStatus == GeminiKeyStatus.set) {
-                      // Show last 4 chars of the draft if available, otherwise
-                      // generic confirmation. We avoid reading from storage here
-                      // to keep the build method synchronous.
-                      final draft = state.draftKey;
-                      final suffix = draft.length >= 4
-                          ? draft.substring(draft.length - 4)
-                          : null;
-                      subtitle = suffix != null
-                          ? 'Key saved ✓ (ends in ••••$suffix)'
-                          : 'Key saved ✓';
-                    } else {
-                      subtitle = 'No key saved';
-                    }
-                    return ListTile(
-                      leading: Icon(
-                        state.geminiKeyStatus == GeminiKeyStatus.set
-                            ? Icons.vpn_key
-                            : Icons.vpn_key_outlined,
-                        color: state.geminiKeyStatus == GeminiKeyStatus.set
-                            ? cs.primary
-                            : cs.outline,
-                      ),
-                      title: const Text('Gemini API Key'),
-                      subtitle: Text(subtitle),
-                    );
-                  },
-                ),
-
-                // Edit key tile — opens the bottom sheet.
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit API Key'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showKeyBottomSheet(context),
-                ),
-
-                const SizedBox(height: 8),
-
-                // ── Account section (signed-in only) ─────────────────────────
-                if (signedIn) ...[
+      child: BlocListener<SettingsBloc, SettingsState>(
+        listenWhen: (p, c) =>
+            c.notificationError != null &&
+            p.notificationError != c.notificationError,
+        listener: (context, state) =>
+            _snack(state.notificationError!, isError: true),
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Settings')),
+          body: Stack(
+            children: [
+              ListView(
+                children: [
+                  // ── AI Settings section (always visible) ──────────────────────
                   _SectionHeader(
-                    label: 'Account',
+                    label: 'AI Settings',
                     textTheme: textTheme,
                     cs: cs,
                   ),
 
-                  // Signed-in user card — mirrors the style from BackupScreen.
-                  _UserCard(user: user!),
-                  const Divider(indent: 16, endIndent: 16),
-
-                  // Sign out
-                  ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text('Sign out'),
-                    onTap: _deleting ? null : _signOut,
+                  // Key status tile — shows masked status, never the raw key.
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final String subtitle;
+                      if (state.geminiKeyStatus == GeminiKeyStatus.set) {
+                        // Show last 4 chars of the draft if available, otherwise
+                        // generic confirmation. We avoid reading from storage here
+                        // to keep the build method synchronous.
+                        final draft = state.draftKey;
+                        final suffix = draft.length >= 4
+                            ? draft.substring(draft.length - 4)
+                            : null;
+                        subtitle = suffix != null
+                            ? 'Key saved ✓ (ends in ••••$suffix)'
+                            : 'Key saved ✓';
+                      } else {
+                        subtitle = 'No key saved';
+                      }
+                      return ListTile(
+                        leading: Icon(
+                          state.geminiKeyStatus == GeminiKeyStatus.set
+                              ? Icons.vpn_key
+                              : Icons.vpn_key_outlined,
+                          color: state.geminiKeyStatus == GeminiKeyStatus.set
+                              ? cs.primary
+                              : cs.outline,
+                        ),
+                        title: const Text('Gemini API Key'),
+                        subtitle: Text(subtitle),
+                      );
+                    },
                   ),
 
-                  // Delete account — destructive action uses error colour.
+                  // Edit key tile — opens the bottom sheet.
                   ListTile(
-                    leading: Icon(Icons.delete_forever, color: cs.error),
-                    title: Text(
-                      'Delete my account',
-                      style: TextStyle(color: cs.error),
-                    ),
-                    onTap: _deleting ? null : _confirmAndDelete,
+                    leading: const Icon(Icons.edit_outlined),
+                    title: const Text('Edit API Key'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showKeyBottomSheet(context),
                   ),
+
                   const SizedBox(height: 8),
-                ],
 
-                // ── About section (always visible) ────────────────────────────
-                _SectionHeader(label: 'About', textTheme: textTheme, cs: cs),
+                  // ── Reminders section (always visible) ───────────────────────
+                  _SectionHeader(
+                    label: 'Reminders',
+                    textTheme: textTheme,
+                    cs: cs,
+                  ),
 
-                // Navigate to the in-app Privacy Policy screen.
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: const Text('Privacy Policy'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PrivacyPolicyScreen(),
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      return Column(
+                        children: [
+                          SwitchListTile(
+                            secondary: state.isScheduling
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.notifications_outlined),
+                            title: const Text('Daily reminder'),
+                            subtitle: state.reminderEnabled
+                                ? Text(
+                                    'Fires at ${state.reminderTime.format(context)}',
+                                  )
+                                : const Text('Off'),
+                            value: state.reminderEnabled,
+                            onChanged: state.isScheduling
+                                ? null
+                                : (v) => context.read<SettingsBloc>().add(
+                                    ReminderToggled(v),
+                                  ),
+                          ),
+                          if (state.reminderEnabled)
+                            ListTile(
+                              leading: const Icon(Icons.access_time_outlined),
+                              title: const Text('Reminder time'),
+                              trailing: Text(
+                                state.reminderTime.format(context),
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              onTap: () => _pickReminderTime(
+                                context,
+                                state.reminderTime,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ── Account section (signed-in only) ─────────────────────────
+                  if (signedIn) ...[
+                    _SectionHeader(
+                      label: 'Account',
+                      textTheme: textTheme,
+                      cs: cs,
+                    ),
+
+                    // Signed-in user card — mirrors the style from BackupScreen.
+                    _UserCard(user: user!),
+                    const Divider(indent: 16, endIndent: 16),
+
+                    // Sign out
+                    ListTile(
+                      leading: const Icon(Icons.logout),
+                      title: const Text('Sign out'),
+                      onTap: _deleting ? null : _signOut,
+                    ),
+
+                    // Delete account — destructive action uses error colour.
+                    ListTile(
+                      leading: Icon(Icons.delete_forever, color: cs.error),
+                      title: Text(
+                        'Delete my account',
+                        style: TextStyle(color: cs.error),
+                      ),
+                      onTap: _deleting ? null : _confirmAndDelete,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // ── About section (always visible) ────────────────────────────
+                  _SectionHeader(label: 'About', textTheme: textTheme, cs: cs),
+
+                  // Navigate to the in-app Privacy Policy screen.
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text('Privacy Policy'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
                     ),
                   ),
-                ),
 
-                // Static version tile — value comes from pubspec.yaml at build time
-                // via the package_info_plus package if needed in the future.
-                const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('Version'),
-                  subtitle: Text('1.0.0'),
-                ),
-              ],
-            ),
-
-            // Loading overlay shown while account deletion is in progress.
-            // Prevents user interaction and communicates that work is happening.
-            if (_deleting)
-              const Positioned.fill(
-                child: ColoredBox(
-                  color: Colors.black26,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                  // Static version tile — value comes from pubspec.yaml at build time
+                  // via the package_info_plus package if needed in the future.
+                  const ListTile(
+                    leading: Icon(Icons.info_outline),
+                    title: Text('Version'),
+                    subtitle: Text('1.0.0'),
+                  ),
+                ],
               ),
-          ],
+
+              // Loading overlay shown while account deletion is in progress.
+              // Prevents user interaction and communicates that work is happening.
+              if (_deleting)
+                const Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black26,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

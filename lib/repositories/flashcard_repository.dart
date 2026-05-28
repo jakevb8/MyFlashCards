@@ -6,4 +6,9 @@ abstract class FlashcardRepository {
   Future<void> addFlashcard(Flashcard flashcard);
   Future<void> updateFlashcard(Flashcard flashcard);
   Future<void> deleteFlashcard(String id);
+
+  /// Returns the count of non-archived cards that are currently due for review.
+  ///
+  /// A card is due when [Flashcard.nextReviewAt] is null or not after now.
+  Future<int> countDueCards();
 }

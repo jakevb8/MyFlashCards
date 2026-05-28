@@ -18,6 +18,7 @@
 //     save an invalid key. It is cleared the moment the user starts typing.
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 
 /// Tracks whether a Gemini API key has been stored in secure storage.
 ///
@@ -41,11 +42,28 @@ class SettingsState extends Equatable {
   /// Cleared to null the moment the user changes the draft text.
   final String? errorMessage;
 
+  /// Whether the daily review reminder notification is enabled.
+  final bool reminderEnabled;
+
+  /// The time of day at which the daily reminder fires. Defaults to 9:00 AM.
+  final TimeOfDay reminderTime;
+
+  /// True while a notification permission request or scheduling call is in flight.
+  final bool isScheduling;
+
+  /// Non-null when a notification operation (permission request or scheduling) fails.
+  /// Cleared to null on the next successful notification operation.
+  final String? notificationError;
+
   const SettingsState({
     this.draftKey = '',
     this.geminiKeyStatus = GeminiKeyStatus.unknown,
     this.isSaving = false,
     this.errorMessage,
+    this.reminderEnabled = false,
+    this.reminderTime = const TimeOfDay(hour: 9, minute: 0),
+    this.isScheduling = false,
+    this.notificationError,
   });
 
   /// Returns a new [SettingsState] with only the specified fields replaced.
@@ -53,8 +71,12 @@ class SettingsState extends Equatable {
     String? draftKey,
     GeminiKeyStatus? geminiKeyStatus,
     bool? isSaving,
-    // Use a sentinel to allow explicitly passing null for errorMessage.
+    // Sentinels allow explicitly passing null to clear the nullable fields.
     Object? errorMessage = _sentinel,
+    bool? reminderEnabled,
+    TimeOfDay? reminderTime,
+    bool? isScheduling,
+    Object? notificationError = _sentinel,
   }) {
     return SettingsState(
       draftKey: draftKey ?? this.draftKey,
@@ -63,6 +85,12 @@ class SettingsState extends Equatable {
       errorMessage: errorMessage == _sentinel
           ? this.errorMessage
           : errorMessage as String?,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderTime: reminderTime ?? this.reminderTime,
+      isScheduling: isScheduling ?? this.isScheduling,
+      notificationError: notificationError == _sentinel
+          ? this.notificationError
+          : notificationError as String?,
     );
   }
 
@@ -72,6 +100,10 @@ class SettingsState extends Equatable {
     geminiKeyStatus,
     isSaving,
     errorMessage,
+    reminderEnabled,
+    reminderTime,
+    isScheduling,
+    notificationError,
   ];
 }
 

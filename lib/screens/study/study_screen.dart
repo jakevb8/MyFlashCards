@@ -1,18 +1,21 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../blocs/analytics/analytics_bloc.dart';
+import '../../blocs/analytics/analytics_event.dart';
 import '../../blocs/flashcard/flashcard_bloc.dart';
 import '../../blocs/flashcard/flashcard_event.dart';
 import '../../blocs/flashcard/flashcard_state.dart';
 import '../../blocs/study/study_bloc.dart';
 import '../../blocs/study/study_event.dart';
 import '../../blocs/study/study_state.dart';
+import '../../core/notification_prefs_keys.dart';
 import '../../models/deck.dart';
 import '../../models/flashcard.dart';
 import '../../models/study_mode.dart';
-import '../../blocs/analytics/analytics_bloc.dart';
-import '../../blocs/analytics/analytics_event.dart';
 import '../../repositories/flashcard_repository.dart';
 import '../../repositories/study_session_repository.dart';
+import '../../services/notification_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class StudyScreen extends StatelessWidget {
@@ -49,12 +52,40 @@ class StudyScreen extends StatelessWidget {
               tolerantMatching: tolerantMatching,
             ),
           ),
-      // BlocListener refreshes analytics once the session completes so the
-      // streak chip and analytics screen show up-to-date data immediately.
-      child: BlocListener<StudyBloc, StudyState>(
-        listenWhen: (_, s) => s is StudyComplete,
-        listener: (context, _) =>
-            context.read<AnalyticsBloc>().add(const LoadAnalytics()),
+      child: MultiBlocListener(
+        listeners: [
+          // Refresh analytics so the streak chip and analytics screen update
+          // immediately after the session completes.
+          BlocListener<StudyBloc, StudyState>(
+            listenWhen: (_, s) => s is StudyComplete,
+            listener: (context, _) =>
+                context.read<AnalyticsBloc>().add(const LoadAnalytics()),
+          ),
+          // Reschedule the daily reminder with a fresh due-card count so the
+          // next notification body reflects cards that were just reviewed.
+          BlocListener<StudyBloc, StudyState>(
+            listenWhen: (_, s) => s is StudyComplete,
+            listener: (context, _) async {
+              // Capture context-dependent values before any async gap.
+              final cardRepo = context.read<FlashcardRepository>();
+              final notifService = context.read<NotificationService>();
+              final prefs = await SharedPreferences.getInstance();
+              final enabled = prefs.getBool(kReminderEnabledKey) ?? false;
+              if (!enabled) return;
+              final hour = prefs.getInt(kReminderHourKey) ?? 9;
+              final minute = prefs.getInt(kReminderMinuteKey) ?? 0;
+              final dueCount = await cardRepo.countDueCards();
+              try {
+                await notifService.scheduleDailyReminder(
+                  time: TimeOfDay(hour: hour, minute: minute),
+                  dueCount: dueCount,
+                );
+              } on NotificationServiceException {
+                // Silent fail — don't interrupt the post-session UI.
+              }
+            },
+          ),
+        ],
         child: _StudyView(deck: deck, flashcards: flashcards, flipped: flipped),
       ),
     );
