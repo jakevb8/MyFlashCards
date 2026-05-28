@@ -206,3 +206,11 @@ Add a typing mode where the user must type the answer from memory rather than se
 
 ### Implementation Notes
 Fully implemented as `StudyMode.typeAnswer` in FEAT-005. `StudyModePickerSheet` shows a TypeAnswer tile with a "Close-enough matching" toggle (Levenshtein distance ≤ 2). `_TypeAnswerCardView` in `study_screen.dart` renders the question, a `TextField` with autofocus, and a feedback area showing the correct answer on failure. Correct answer rates `RateCard(quality: 4)`; wrong rates `RateCard(quality: 0)`. SM-2 pipeline is identical to other modes. FEAT-016 was written as a spec for already-shipped functionality.
+
+## [FEAT-017] Deck Collections / Bundled Study — completed be04538
+
+### Goal
+Let users multi-select decks and study them together in one merged session.
+
+### Implementation Notes
+`DeckListScreen` converted from `StatelessWidget` to `StatefulWidget` with `_multiSelectMode: bool` and `_selectedDeckIds: Set<String>` local state. Long-press triggers `_enterMultiSelect()`; tapping in select mode toggles selection. App bar switches to a selection toolbar (count + "Study Selected" button when ≥2 selected); FAB hidden during selection. `_DeckTile` gets `isMultiSelectMode`/`isSelected`/`onLongPress`/`onToggleSelect` params — shows `Checkbox` leading, skips `Slidable` wrapper. `_studySelectedDecks()` calls `FlashcardRepository.getFlashcardsByDecks()` (new method, single-pass Hive scan), filters archived cards, shows `StudyModePickerSheet`, then navigates to `StudyScreen(decks: selectedDecks, ...)`. `StudyScreen` changed from `required Deck deck` to `required List<Deck> decks` with `_displayName` getter ("A + B" or "A + B & N more"). `FlashcardListScreen` updated to pass `decks: [deck]`. `StudyBloc` untouched.

@@ -23,4 +23,4 @@
 | FEAT-014 | AI Card Regeneration           | completed | P2       | 4788f1d |
 | FEAT-015 | Deck Tags & Filtering          | completed | P2       | ab93772 |
 | FEAT-016 | Typing Study Mode              | completed | P2       | 6988a83 |
-| FEAT-017 | Deck Collections / Bundled Study | queued  | P3       | —       |
+| FEAT-017 | Deck Collections / Bundled Study | completed | P3     | be04538 |
