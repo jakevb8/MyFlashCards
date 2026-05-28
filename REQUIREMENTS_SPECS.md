@@ -5,32 +5,6 @@ Completed specs are moved to `REQUIREMENTS_ARCHIVE.md`.
 
 ---
 
-## [FEAT-016] Typing Study Mode
-
-**Priority:** P2
-**Status:** queued
-
-### Goal
-Add a typing mode where the user must type the answer from memory rather than self-rating a flipped card, forcing production recall for stronger retention.
-
-### User Stories
-- As a language learner, I want to type the translation of a word to test my production recall, not just recognition.
-- As a learner, I want a tolerated match (case-insensitive, minor typos allowed) so one typo doesn't count as wrong.
-
-### Acceptance Criteria
-- `StudyMode.typing` added to the existing `StudyMode` enum.
-- Typing mode available in `StudyModePicker` sheet.
-- Study screen shows a text input instead of flip + rating buttons.
-- On submit: correct → auto-advances with `RateCard(quality: 5)`; incorrect → shows correct answer with `RateCard(quality: 0)`.
-- Tolerated match: case-insensitive, trim whitespace; optionally ignore punctuation.
-- SM-2 scheduling still applied identically to other modes.
-
-### Out of Scope
-- Partial-credit scoring.
-- Fuzzy matching beyond case/whitespace/punctuation.
-
----
-
 ## [FEAT-017] Deck Collections / Bundled Study
 
 **Priority:** P3

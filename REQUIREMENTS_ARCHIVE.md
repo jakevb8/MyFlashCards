@@ -198,3 +198,11 @@ Let users tag decks (e.g. "Spanish", "Biology", "Kids") and filter the deck list
 
 ### Implementation Notes
 `Deck` model gains `List<String> tags` at `@HiveField(5)` — existing records read `null` from Hive and default to `const []`. `DeckFormScreen` gets a tag chip input: `InputChip` rows with an `X` button plus a `TextField` that triggers `_addTag()` on Enter/comma. `DeckLoaded` state gains `selectedTag: String?` with `copyWith(clearTag: bool)` sentinel pattern. `FilterDecksByTag(String? tag)` event handled synchronously in `DeckBloc` without a repository call. `DeckListScreen` computes `allTags` and `displayedDecks` from the full list, shows `_TagFilterBar` when any deck has tags, and renders tag chips on each `_DeckTile`. `deck.g.dart` regenerated with null-safe Hive field 5 migration.
+
+## [FEAT-016] Typing Study Mode — completed 6988a83
+
+### Goal
+Add a typing mode where the user must type the answer from memory rather than self-rating a flipped card.
+
+### Implementation Notes
+Fully implemented as `StudyMode.typeAnswer` in FEAT-005. `StudyModePickerSheet` shows a TypeAnswer tile with a "Close-enough matching" toggle (Levenshtein distance ≤ 2). `_TypeAnswerCardView` in `study_screen.dart` renders the question, a `TextField` with autofocus, and a feedback area showing the correct answer on failure. Correct answer rates `RateCard(quality: 4)`; wrong rates `RateCard(quality: 0)`. SM-2 pipeline is identical to other modes. FEAT-016 was written as a spec for already-shipped functionality.
